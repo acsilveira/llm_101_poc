@@ -1,0 +1,8 @@
+LLM 101 PoC, todo
+        Setup environment
+[DONE]      Build docker image
+[DONE]          Set env vars file
+[DONE]  Try LangChain asking ChatGPT
+[DONE]          Understand if possible use OpenAI API for free
+[DONE]  Ask a question about an web article
+
