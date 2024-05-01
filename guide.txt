@@ -1,8 +1,13 @@
 LLM 101 PoC, todo
-        Setup environment
+[DONE]  Setup environment
 [DONE]      Build docker image
 [DONE]          Set env vars file
 [DONE]  Try LangChain asking ChatGPT
 [DONE]          Understand if possible use OpenAI API for free
 [DONE]  Ask a question about an web article
+[DONE]  Ask a question about an PDF file
+[DONE]  Build an simple app with streamlit
+[DONE]          Minimal app running in streamlit
+[DONE]          Build form with: text edit for question and file uploader button
+[wip]   Insert llm pipeline in the streamlit interface
 
