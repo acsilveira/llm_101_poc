@@ -9,5 +9,10 @@ LLM 101 PoC, todo
 [DONE]  Build an simple app with streamlit
 [DONE]          Minimal app running in streamlit
 [DONE]          Build form with: text edit for question and file uploader button
-[wip]   Insert llm pipeline in the streamlit interface
+[DONE]  Make llm chain work totally by code, without human interaction
+[DONE]  Insert llm pipeline in the streamlit interface
+        Improve front-end
+                Upload PDF before questions input
+        Improve LLM answer
+                Learn how to break text in chuncks for a better LLM answer
 
