@@ -11,8 +11,14 @@ LLM 101 PoC, todo
 [DONE]          Build form with: text edit for question and file uploader button
 [DONE]  Make llm chain work totally by code, without human interaction
 [DONE]  Insert llm pipeline in the streamlit interface
-        Improve front-end
-                Upload PDF before questions input
-        Improve LLM answer
-                Learn how to break text in chuncks for a better LLM answer
+[DONE]  Improve front-end
+[DONE]          Upload PDF before questions input
+[DONE]  Improve LLM answer
+[DONE]          Use documents split by header, not splitted 2 times
+[DONE]          Find the point to wait for the vectorstore be ready
+[DONE]          Allow ask again using vectors already loaded
+[DONE]                  Create methods for calss controller_llm
+[DONE]          Display log step by step to the user
+[DONE]                  Use response of each method to print log in streamlit
+[DONE]          Learn how to break text in chuncks for a better LLM answer
 
