@@ -13,12 +13,12 @@ LLM 101 PoC, todo
 [DONE]  Insert llm pipeline in the streamlit interface
 [DONE]  Improve front-end
 [DONE]          Upload PDF before questions input
-        Improve LLM answer
+[DONE]  Improve LLM answer
 [DONE]          Use documents split by header, not splitted 2 times
 [DONE]          Find the point to wait for the vectorstore be ready
 [DONE]          Allow ask again using vectors already loaded
 [DONE]                  Create methods for calss controller_llm
-                Display log step by step to the user
-                        Use response of each method to print log in streamlit
+[DONE]          Display log step by step to the user
+[DONE]                  Use response of each method to print log in streamlit
 [DONE]          Learn how to break text in chuncks for a better LLM answer
 
