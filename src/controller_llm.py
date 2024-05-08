@@ -166,6 +166,8 @@ class ControllerLlm:
 
         try:
             self._utils.log(load_dotenv())  # Check env_vars
+            print(f"===>GOOGLE_API_KEY len: {len(os.environ.get('GOOGLE_API_KEY'))}")
+            print(f"===>PINECONE_API_KEY len: {len(os.environ.get('PINECONE_API_KEY'))}")
             genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))  # Auth Google
             self._vector_store_client = Pinecone(
                 api_key=str(os.getenv("PINECONE_API_KEY")).strip('"')

@@ -13,12 +13,25 @@ LLM 101 PoC, todo
 [DONE]  Insert llm pipeline in the streamlit interface
 [DONE]  Improve front-end
 [DONE]          Upload PDF before questions input
-[DONE]  Improve LLM answer
+        Improve LLM answer
 [DONE]          Use documents split by header, not splitted 2 times
 [DONE]          Find the point to wait for the vectorstore be ready
 [DONE]          Allow ask again using vectors already loaded
 [DONE]                  Create methods for calss controller_llm
 [DONE]          Display log step by step to the user
 [DONE]                  Use response of each method to print log in streamlit
-[DONE]          Learn how to break text in chuncks for a better LLM answer
-
+[DONE]          Learn how to break text in chunks for a better LLM answer
+                Use a strategy that works better for different html structures
+        Deploy the app to the web
+[DONE]      AWS and GCP image recap
+[DONE]          Check pricing
+            Try deploy for free
+[DONE]          Build a lean docker image trying to stay below 0.5 GB
+[DONE]              Fix version of the app current version
+[DONE]          If for free, deploy v0v1 version to web
+[DONE]              Deploy in GCP respecting  always free limits
+                Avoid shutdown app if the GCP web console get closed
+        Improve answer
+            from PDFToChat
+[DONE]          Check chunks strategy
+                Check LLM and embedding strategy

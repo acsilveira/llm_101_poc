@@ -17,7 +17,7 @@ from bs4 import BeautifulSoup
 from langchain_text_splitters import HTMLHeaderTextSplitter
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import time
-
+import sys
 
 class UtilsLLM:
     """
@@ -35,6 +35,7 @@ class UtilsLLM:
         """ Get text from a web URL article, parsing HTML with LangChain"""
 
         try:
+            print(f"===>{sys.version}")
             response = requests.get(url)
             if response.status_code == 200:
                 headers_to_split_on = [
