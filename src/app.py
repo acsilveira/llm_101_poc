@@ -17,8 +17,8 @@ def main():
         st.session_state.question_text = False
     if "ctl_llm" not in st.session_state:
         st.session_state.ctl_llm = controller_llm.ControllerLlm("", "")
-    if 'question_again_text' not in st.session_state:
-        st.session_state.question_again_text = ''
+    if "question_again_text" not in st.session_state:
+        st.session_state.question_again_text = ""
 
     st.title("LLM very simple app")
 
@@ -97,7 +97,9 @@ def main():
             st.write("Warming up LLM and then asking...")
             answer = st.session_state.ctl_llm.main()
 
-            st.markdown(f"```It will take some time because first we need to warm up the LLM and their friends. If you are curious I can show you each step happening. But I will be quick so chop-chop. Enjoy the ride...```")
+            st.markdown(
+                f"```It will take some time because first we need to warm up the LLM and their friends. If you are curious I can show you each step happening. But I will be quick so chop-chop. Enjoy the ride...```"
+            )
             st.markdown(f"```Starting...```")
 
             # --- Authentication
@@ -105,12 +107,18 @@ def main():
             st.markdown(f"```{log_msg}```")
 
             # Get text content
-            text_content, log_msg = st.session_state.ctl_llm.get_content()
+            text_content, log_msg = st.session_state.ctl_llm.get_content(
+                mode="text_no_parse"
+            )
             st.markdown(f"```{log_msg}```")
-            if not text_content :
-                st.markdown(":red[This article is not accessible by me.] Sorry. Please try another article. The app will restart soon.")
+            if not text_content:
+                st.markdown(
+                    ":red[This article is not accessible by me.] Sorry. Please try another article. The app will restart soon."
+                )
                 set_state(0)
-                utils.wait_for(seconds_to_wait=general_parameters.par__waiting_time_in_seconds_in_error_case)
+                utils.wait_for(
+                    seconds_to_wait=general_parameters.par__waiting_time_in_seconds_in_error_case
+                )
                 st.experimental_rerun()
 
             _, log_msg = st.session_state.ctl_llm.describe_chunks(text_content)
@@ -125,12 +133,21 @@ def main():
             st.markdown(f"```{log_msg}```")
 
             # Upload vectors to vetorstore
-            vectorstore_from_docs, log_msg = st.session_state.ctl_llm.upload_vectors_to_vector_store(text_content, embedding_model)
+            (
+                vectorstore_from_docs,
+                log_msg,
+            ) = st.session_state.ctl_llm.upload_vectors_to_vector_store(
+                text_content, embedding_model
+            )
             st.markdown(f"```{log_msg}```")
 
             # Wait some time, to have vectorstore available
-            st.markdown(f"```Waiting {general_parameters.par__waiting_time_in_seconds} seconds...```")
-            utils.wait_for(seconds_to_wait=general_parameters.par__waiting_time_in_seconds)
+            st.markdown(
+                f"```Waiting {general_parameters.par__waiting_time_in_seconds} seconds...```"
+            )
+            utils.wait_for(
+                seconds_to_wait=general_parameters.par__waiting_time_in_seconds
+            )
             st.markdown(f"```...continuing now.```")
 
             # Check if the new index exists
@@ -138,7 +155,7 @@ def main():
             st.markdown(f"```{log_msg}```")
 
             # Check availability of the vectorestore
-            #ToDo
+            # ToDo
 
             # Define LLM model
             llm_model, log_msg = st.session_state.ctl_llm.define_llm_model()
@@ -149,7 +166,9 @@ def main():
             st.markdown(f"```{log_msg}```")
 
             # Build chain
-            _, log_msg = st.session_state.ctl_llm.build_chain(vectorstore_from_docs, llm_model, prompt)
+            _, log_msg = st.session_state.ctl_llm.build_chain(
+                vectorstore_from_docs, llm_model, prompt
+            )
             st.markdown(f"```{log_msg}```")
 
             # Ask question about the content
