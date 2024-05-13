@@ -19,6 +19,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 import time
 import sys
 
+
 class UtilsLLM:
     """
     Set of useful transformations to handle LLM interactions.
@@ -29,7 +30,6 @@ class UtilsLLM:
 
         text = text.replace("•", "  *")
         return Markdown(textwrap.indent(text, "> ", predicate=lambda _: True))
-
 
     def get_text_from_web_article_parsing_htmlLangChain(self, url):
         """ Get text from a web URL article, parsing HTML with LangChain"""
@@ -44,9 +44,13 @@ class UtilsLLM:
                     ("h3", "Header 3"),
                     ("h4", "Header 4"),
                 ]
-                html_splitter = HTMLHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+                html_splitter = HTMLHeaderTextSplitter(
+                    headers_to_split_on=headers_to_split_on
+                )
                 html_header_splits = html_splitter.split_text_from_url(url)
-                log_msg = f"Succeed getting text from URL {url} and splitting in HTML headers"
+                log_msg = (
+                    f"Succeed getting text from URL {url} and splitting in HTML headers"
+                )
                 return html_header_splits, log_msg
             else:
                 log_msg = f"Failed to fetch content from URL {url}"
@@ -55,7 +59,6 @@ class UtilsLLM:
             raise e
             log_msg = f"An error occurred: {e}"
             return None, log_msg
-
 
     def get_text_from_web_article_parsing_html(self, url):
         """ Get text from a web URL article, parsing HTML"""
@@ -77,7 +80,6 @@ class UtilsLLM:
             raise e
             log_msg = f"An error occurred: {e}"
             return None, log_msg
-
 
     def get_text_from_web_article(self, url):
         """ Get text from a web URL article """
@@ -140,7 +142,9 @@ class UtilsLLM:
 
         return embedding_model, "Succeed defining the embedding model"
 
-    def check_if_pinecone_index_exists(self, pinecone_client, par__vector_store_index_name):
+    def check_if_pinecone_index_exists(
+        self, pinecone_client, par__vector_store_index_name
+    ):
         if par__vector_store_index_name in pinecone_client.list_indexes().names():
             return True, "Pinecone index exists."
         return False, "Pinecone index not found."
@@ -148,7 +152,9 @@ class UtilsLLM:
     def create_pinecone_index(self, pinecone_client, par__vector_store_index_name):
 
         # If index already exists
-        if self.check_if_pinecone_index_exists(pinecone_client, par__vector_store_index_name):
+        if self.check_if_pinecone_index_exists(
+            pinecone_client, par__vector_store_index_name
+        ):
             # Delete index before create it again
             try:
                 pinecone_client.delete_index(par__vector_store_index_name)
@@ -223,13 +229,17 @@ class UtilsLLM:
 
         return retrieval_chain, "Succeed building chain"
 
-    def build_chain_woRetriver(self, llm_model, prompt, par__prompt_template_var_input, input_question):
-        print(par__prompt_template_var_context+"="+input_context[:500])
+    def build_chain_woRetriver(
+        self, llm_model, prompt, par__prompt_template_var_input, input_question
+    ):
+        print(par__prompt_template_var_context + "=" + input_context[:500])
         try:
-            result = llm_model.invoke(prompt.format(par__prompt_template_var_input=input_question))
+            result = llm_model.invoke(
+                prompt.format(par__prompt_template_var_input=input_question)
+            )
         except Exception as e:
             raise e
-        
+
         return result, "Succeed asking question about content, without a retriever"
 
     def asking_question_about_content(self, retrieval_chain, question):
@@ -244,9 +254,27 @@ class UtilsLLM:
         return answer_about_content, "Succeed asking question about content"
 
     def wait_for(self, seconds_to_wait):
-        ''' Wait some seconds '''
+        """ Wait some seconds """
 
         self.log(f"Waiting {seconds_to_wait} seconds...")
         time.sleep(seconds_to_wait)
-        self.log("...continuing now.")        
+        self.log("...continuing now.")
         pass
+
+    def split_text_into_chunks(self, raw_text_content):
+        """ Split raw text into chunks """
+
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=general_parameters.par__chunk_size,
+            chunk_overlap=general_parameters.par__chunk_overlap,
+        )
+        chunks = text_splitter.create_documents([raw_text_content])
+        self.log("Text splitted into chunks with success.")
+        return chunks, "Text splitted into chunks with success."
+
+    def get_text_from_web_article_parsing_text(self, url):
+        text_content, log_msg = self.get_text_from_web_article(url)
+        self.log(log_msg)
+        chunks, log_msg = self.split_text_into_chunks(text_content)
+        self.log(log_msg)
+        return chunks, log_msg

@@ -22,15 +22,15 @@ LLM 101 PoC, todo
 [DONE]                  Use response of each method to print log in streamlit
 [DONE]          Learn how to break text in chunks for a better LLM answer
                 Use a strategy that works better for different html structures
-        Deploy the app to the web
+[DONE]  Deploy the app to the web
 [DONE]      AWS and GCP image recap
 [DONE]          Check pricing
-            Try deploy for free
+[DONE]      Try deploy for free
 [DONE]          Build a lean docker image trying to stay below 0.5 GB
 [DONE]              Fix version of the app current version
 [DONE]          If for free, deploy v0v1 version to web
 [DONE]              Deploy in GCP respecting  always free limits
-                Avoid shutdown app if the GCP web console get closed
+[DONE]          Avoid shutdown app if the GCP web console get closed
         Improve answer
             from PDFToChat
 [DONE]          Check chunks strategy

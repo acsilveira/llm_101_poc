@@ -113,7 +113,7 @@ class ControllerLlm:
         # self._utils.wait_for(seconds_to_wait=5)
 
         # Check availability of the vectorestore
-        #ToDo
+        # ToDo
 
         # # Check if the new index exists
         # _, log_msg = self._utils.check_if_pinecone_index_exists(self._vector_store_client, general_parameters.par__vector_store_index_name)
@@ -147,15 +147,13 @@ class ControllerLlm:
         # self._utils.log("Question asked and answer received.")
         pass
 
-    def split_text_into_chunks(self, pdf_raw_text_content):
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=0,)
-        chunks = text_splitter.create_documents([pdf_raw_text_content])
-
-        return chunks, "Text splitted into chunks with success."
-
-    def split_documents_into_chunks(self, documents_content, parr_chunk_size=500, parr_chunk_overlap=50):
+    def split_documents_into_chunks(
+        self, documents_content, parr_chunk_size=500, parr_chunk_overlap=50
+    ):
         try:
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=parr_chunk_size, chunk_overlap=parr_chunk_overlap)
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=parr_chunk_size, chunk_overlap=parr_chunk_overlap
+            )
             chunks = text_splitter.split_documents(documents_content)
             return chunks, "Documents splitted into chunks with success."
         except Exception as e:
@@ -167,7 +165,9 @@ class ControllerLlm:
         try:
             self._utils.log(load_dotenv())  # Check env_vars
             print(f"===>GOOGLE_API_KEY len: {len(os.environ.get('GOOGLE_API_KEY'))}")
-            print(f"===>PINECONE_API_KEY len: {len(os.environ.get('PINECONE_API_KEY'))}")
+            print(
+                f"===>PINECONE_API_KEY len: {len(os.environ.get('PINECONE_API_KEY'))}"
+            )
             genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))  # Auth Google
             self._vector_store_client = Pinecone(
                 api_key=str(os.getenv("PINECONE_API_KEY")).strip('"')
@@ -179,7 +179,9 @@ class ControllerLlm:
             raise e
 
     def ask_question_to_llm(self):
-        answer, log_msg = self._utils.asking_question_about_content(self._chain, self._question)
+        answer, log_msg = self._utils.asking_question_about_content(
+            self._chain, self._question
+        )
         self._utils.log(log_msg)
         self._utils.log(f"Q: {self._question}")
         self._utils.log("A: " + answer["answer"])
@@ -189,11 +191,24 @@ class ControllerLlm:
     def check_if_chain_is_ready(self):
         return self._chain_ready
 
-    def get_content(self):
-        text_content, log_msg = self._utils.get_text_from_web_article_parsing_htmlLangChain(self.url)
+    def get_content(self, mode="html_parse"):
+        if mode == "html_parse":
+            (
+                text_content,
+                log_msg,
+            ) = self._utils.get_text_from_web_article_parsing_htmlLangChain(self.url)
+        elif mode == "text_no_parse":
+            (
+                text_content,
+                log_msg,
+            ) = self._utils.get_text_from_web_article_parsing_text(self.url)
+        else:
+            return None, "Unknown mode to get content."
         return text_content, log_msg
 
     def describe_chunks(self, chunks):
+        """ Check and print metrics about the text chunks """
+
         content = "\n".join(str(p.page_content) for p in chunks)
         log_msg = ""
         log_msg += f"Total of words in the content: {len(content)}"
@@ -212,14 +227,16 @@ class ControllerLlm:
 
     def upload_vectors_to_vector_store(self, chunks, embedding_model):
         vectorstore_from_docs, log_msg = self._utils.upload_vectors_to_vectorstore(
-            self._vector_store_client, general_parameters.par__vector_store_index_name, chunks, embedding_model
+            self._vector_store_client,
+            general_parameters.par__vector_store_index_name,
+            chunks,
+            embedding_model,
         )
         return vectorstore_from_docs, log_msg
 
     def check_if_vector_store_index_exists(self):
         _, log_msg = self._utils.check_if_pinecone_index_exists(
-            self._vector_store_client,
-            general_parameters.par__vector_store_index_name
+            self._vector_store_client, general_parameters.par__vector_store_index_name
         )
         return _, log_msg
 
@@ -232,6 +249,8 @@ class ControllerLlm:
         return prompt, log_msg
 
     def build_chain(self, vectorstore_from_docs, llm_model, prompt):
-        self._chain, log_msg = self._utils.build_chain(vectorstore_from_docs, llm_model, prompt)
+        self._chain, log_msg = self._utils.build_chain(
+            vectorstore_from_docs, llm_model, prompt
+        )
         self.chain_ready = True
         return None, log_msg
