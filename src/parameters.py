@@ -14,3 +14,5 @@ par__prompt_template_var_input = "input"
 par__verbose_mode = True
 par__waiting_time_in_seconds = 5
 par__waiting_time_in_seconds_in_error_case = 10
+par__chunk_size = 1000
+par__chunk_overlap = 200
