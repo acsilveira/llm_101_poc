@@ -5,6 +5,8 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pinecone import Pinecone
 import utils as toolkit
 import parameters as general_parameters
+from logging_setter import logger
+
 
 
 class ControllerLlm:
@@ -16,6 +18,8 @@ class ControllerLlm:
         self._chain = None
         self._verbose_mode = True
         self._chain_ready = False
+        self.logger = logger
+        self.logger.info("Controller initialized")
 
     @property
     def url(self):
@@ -155,7 +159,9 @@ class ControllerLlm:
                 chunk_size=parr_chunk_size, chunk_overlap=parr_chunk_overlap
             )
             chunks = text_splitter.split_documents(documents_content)
-            return chunks, "Documents splitted into chunks with success."
+            log_msg = "Documents splitted into chunks with success."
+            self.logger.info(log_msg)
+            return chunks, log_msg
         except Exception as e:
             raise e
 
@@ -163,29 +169,39 @@ class ControllerLlm:
         """ Do the authentications needed """
 
         try:
-            self._utils.log(load_dotenv())  # Check env_vars
-            print(f"===>GOOGLE_API_KEY len: {len(os.environ.get('GOOGLE_API_KEY'))}")
-            print(
-                f"===>PINECONE_API_KEY len: {len(os.environ.get('PINECONE_API_KEY'))}"
+            self.logger.info(f"Env vars loaded: {load_dotenv()}")  # Check env_vars
+            self.logger.info(f"GOOGLE_API_KEY len: {len(os.environ.get('GOOGLE_API_KEY'))}")
+            self.logger.info(
+                f"PINECONE_API_KEY len: {len(os.environ.get('PINECONE_API_KEY'))}"
+            )
+            self.logger.info(
+                f"OPENAI_API_KEY len: {len(os.environ.get('OPENAI_API_KEY'))}"
             )
             genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))  # Auth Google
             self._vector_store_client = Pinecone(
                 api_key=str(os.getenv("PINECONE_API_KEY")).strip('"')
             )  # Auth Pinecone
             log_msg = "Succeed authenticating."
-
+            self.logger.info(log_msg)
             return True, log_msg
         except Exception as e:
             raise e
 
-    def ask_question_to_llm(self):
-        answer, log_msg = self._utils.asking_question_about_content(
-            self._chain, self._question
-        )
-        self._utils.log(log_msg)
-        self._utils.log(f"Q: {self._question}")
-        self._utils.log("A: " + answer["answer"])
-        print(answer)
+    def ask_question_to_llm(self, llm_model_choice):
+        if llm_model_choice == "Gemini":
+            answer, log_msg = self._utils.asking_question_about_content_gemini(
+                self._chain, self._question
+            )
+        elif llm_model_choice == "chatGPT":
+            answer, log_msg = self._utils.asking_question_about_content_chat_gpt(
+                self._chain, self._question
+            )
+        else:
+            self.logger.error("Unknown LLM model choice")
+            return False, "Unknown LLM model choice"
+        self.logger.info(f"Q: {self._question}")
+        self.logger.info("A: " + answer["answer"])
+        self.logger.info(answer)
         return True, answer
 
     def check_if_chain_is_ready(self):
@@ -196,13 +212,14 @@ class ControllerLlm:
             (
                 text_content,
                 log_msg,
-            ) = self._utils.get_text_from_web_article_parsing_htmlLangChain(self.url)
+            ) = self._utils.get_text_from_web_article_parsing_html_langchain(self.url)
         elif mode == "text_no_parse":
             (
                 text_content,
                 log_msg,
             ) = self._utils.get_text_from_web_article_parsing_text(self.url)
         else:
+            self.logger.error("Unknown mode to get content")
             return None, "Unknown mode to get content."
         return text_content, log_msg
 
@@ -213,6 +230,7 @@ class ControllerLlm:
         log_msg = ""
         log_msg += f"Total of words in the content: {len(content)}"
         log_msg += f", and total of chunks: {len(chunks)}"
+        self.logger.info(log_msg)
         return None, log_msg
 
     def define_embedding_model(self):
@@ -227,7 +245,6 @@ class ControllerLlm:
 
     def upload_vectors_to_vector_store(self, chunks, embedding_model):
         vectorstore_from_docs, log_msg = self._utils.upload_vectors_to_vectorstore(
-            self._vector_store_client,
             general_parameters.par__vector_store_index_name,
             chunks,
             embedding_model,
@@ -240,17 +257,26 @@ class ControllerLlm:
         )
         return _, log_msg
 
-    def define_llm_model(self):
-        llm_model, log_msg = self._utils.define_llm_model()
+    def define_llm_model(self, llm_model_choice):
+        llm_model, log_msg = self._utils.define_llm_model(llm_model_choice)
         return llm_model, log_msg
 
     def prepare_prompt(self):
         prompt, log_msg = self._utils.prepare_prompt()
         return prompt, log_msg
 
-    def build_chain(self, vectorstore_from_docs, llm_model, prompt):
-        self._chain, log_msg = self._utils.build_chain(
-            vectorstore_from_docs, llm_model, prompt
-        )
-        self.chain_ready = True
+    def build_chain(self, vectorstore_from_docs, llm_model, prompt, llm_model_choice):
+        if llm_model_choice == "Gemini":
+            self._chain, log_msg = self._utils.build_chain_gemini(
+                vectorstore_from_docs, llm_model, prompt
+            )
+            self.chain_ready = True
+        elif llm_model_choice == "chatGPT":
+            self._chain, log_msg = self._utils.build_chain_chat_gpt(
+                vectorstore_from_docs, llm_model, prompt
+            )
+            self.chain_ready = True
+        else:
+            log_msg = "Unknown LLM model choice."
+            self.logger.error(log_msg)
         return None, log_msg
