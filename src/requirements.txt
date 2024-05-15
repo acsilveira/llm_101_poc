@@ -13,3 +13,4 @@ langchain_pinecone==0.1.0
 beautifulsoup4
 PyPDF2
 pdfplumber
+pytest==8.2.0

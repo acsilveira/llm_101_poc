@@ -8,6 +8,9 @@ def main():
     def set_state(i):
         st.session_state.stage = i
 
+    def set_llm_model_choice():
+        st.session_state.llm_model_choice = st.session_state['element_llm_model_choice']
+
     # Control UI stages
     if "stage" not in st.session_state:
         st.session_state.stage = 0
@@ -19,11 +22,20 @@ def main():
         st.session_state.ctl_llm = controller_llm.ControllerLlm("", "")
     if "question_again_text" not in st.session_state:
         st.session_state.question_again_text = ""
+    if "llm_model_choice" not in st.session_state:
+        st.session_state.llm_model_choice = general_parameters.par__default_llm_model_choice
 
     st.title("LLM very simple app")
 
     # Shows button to upload PDF
     if st.session_state.stage < 1:
+
+        st.selectbox(
+            "LLM being used:",
+            ("Gemini", "chatGPT"),
+            on_change=set_llm_model_choice,
+            key="element_llm_model_choice"
+        )
 
         st.subheader("Article URL")
         st.write("What article do you want ask about?")
@@ -82,7 +94,8 @@ def main():
         placeholder_confirmation = st.empty()
         with placeholder_confirmation.container():
             st.markdown(
-                f"You would ask **{st.session_state.question_text}** about the article in ```{st.session_state.url_to_ask }```."
+                f"You would ask **{st.session_state.question_text}** about the article in "
+                f"```{st.session_state.url_to_ask}```. "
             )
             st.button("Ask to LLM", on_click=set_state, args=[3])
 
@@ -95,10 +108,12 @@ def main():
         placeholder_log = st.empty()
         with placeholder_log.container():
             st.write("Warming up LLM and then asking...")
-            answer = st.session_state.ctl_llm.main()
+            _ = st.session_state.ctl_llm.main()
 
             st.markdown(
-                f"```It will take some time because first we need to warm up the LLM and their friends. If you are curious I can show you each step happening. But I will be quick so chop-chop. Enjoy the ride...```"
+                f"```It will take some time because first we need to warm up the LLM and their friends."
+                f" If you are curious I can show you each step happening. But I will be quick so chop-chop."
+                f" Enjoy the ride...```"
             )
             st.markdown(f"```Starting...```")
 
@@ -113,7 +128,8 @@ def main():
             st.markdown(f"```{log_msg}```")
             if not text_content:
                 st.markdown(
-                    ":red[This article is not accessible by me.] Sorry. Please try another article. The app will restart soon."
+                    ":red[This article is not accessible by me.] Sorry. Please try another article."
+                    " The app will restart soon."
                 )
                 set_state(0)
                 utils.wait_for(
@@ -158,7 +174,7 @@ def main():
             # ToDo
 
             # Define LLM model
-            llm_model, log_msg = st.session_state.ctl_llm.define_llm_model()
+            llm_model, log_msg = st.session_state.ctl_llm.define_llm_model(st.session_state.llm_model_choice)
             st.markdown(f"```{log_msg}```")
 
             # Prepare prompt
@@ -167,12 +183,12 @@ def main():
 
             # Build chain
             _, log_msg = st.session_state.ctl_llm.build_chain(
-                vectorstore_from_docs, llm_model, prompt
+                vectorstore_from_docs, llm_model, prompt, st.session_state.llm_model_choice
             )
             st.markdown(f"```{log_msg}```")
 
             # Ask question about the content
-            _, answer = st.session_state.ctl_llm.ask_question_to_llm()
+            _, answer = st.session_state.ctl_llm.ask_question_to_llm(st.session_state.llm_model_choice)
             st.markdown(f"```{log_msg}```")
 
             placeholder_log.empty()
@@ -205,7 +221,7 @@ def main():
         placeholder_running_again = st.empty()
         with placeholder_running_again.container():
             st.markdown("```Asking with LLM warmed... now is faster.```")
-            _, answer = st.session_state.ctl_llm.ask_question_to_llm()
+            _, answer = st.session_state.ctl_llm.ask_question_to_llm(st.session_state.llm_model_choice)
         placeholder_running_again.empty()
 
         st.write(answer["answer"])
