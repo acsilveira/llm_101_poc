@@ -9,7 +9,7 @@ def main():
         st.session_state.stage = i
 
     def set_llm_model_choice():
-        st.session_state.llm_model_choice = st.session_state['element_llm_model_choice']
+        st.session_state.llm_model_choice = st.session_state["element_llm_model_choice"]
 
     # Control UI stages
     if "stage" not in st.session_state:
@@ -23,7 +23,9 @@ def main():
     if "question_again_text" not in st.session_state:
         st.session_state.question_again_text = ""
     if "llm_model_choice" not in st.session_state:
-        st.session_state.llm_model_choice = general_parameters.par__default_llm_model_choice
+        st.session_state.llm_model_choice = (
+            general_parameters.par__default_llm_model_choice
+        )
 
     st.title("LLM very simple app")
 
@@ -34,7 +36,7 @@ def main():
             "LLM being used:",
             ("Gemini", "chatGPT"),
             on_change=set_llm_model_choice,
-            key="element_llm_model_choice"
+            key="element_llm_model_choice",
         )
 
         st.subheader("Article URL")
@@ -174,7 +176,9 @@ def main():
             # ToDo
 
             # Define LLM model
-            llm_model, log_msg = st.session_state.ctl_llm.define_llm_model(st.session_state.llm_model_choice)
+            llm_model, log_msg = st.session_state.ctl_llm.define_llm_model(
+                st.session_state.llm_model_choice
+            )
             st.markdown(f"```{log_msg}```")
 
             # Prepare prompt
@@ -183,12 +187,17 @@ def main():
 
             # Build chain
             _, log_msg = st.session_state.ctl_llm.build_chain(
-                vectorstore_from_docs, llm_model, prompt, st.session_state.llm_model_choice
+                vectorstore_from_docs,
+                llm_model,
+                prompt,
+                st.session_state.llm_model_choice,
             )
             st.markdown(f"```{log_msg}```")
 
             # Ask question about the content
-            _, answer = st.session_state.ctl_llm.ask_question_to_llm(st.session_state.llm_model_choice)
+            _, answer = st.session_state.ctl_llm.ask_question_to_llm(
+                st.session_state.llm_model_choice
+            )
             st.markdown(f"```{log_msg}```")
 
             placeholder_log.empty()
@@ -221,7 +230,9 @@ def main():
         placeholder_running_again = st.empty()
         with placeholder_running_again.container():
             st.markdown("```Asking with LLM warmed... now is faster.```")
-            _, answer = st.session_state.ctl_llm.ask_question_to_llm(st.session_state.llm_model_choice)
+            _, answer = st.session_state.ctl_llm.ask_question_to_llm(
+                st.session_state.llm_model_choice
+            )
         placeholder_running_again.empty()
 
         st.write(answer["answer"])

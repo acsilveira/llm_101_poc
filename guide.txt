@@ -38,6 +38,9 @@ LLM 101 PoC, todo
 [DONE]  Logging
 [DONE]      Implement real logging
         Tech debt
+            Reorg code as best practice
+                Model, View, Controller
+                SOLID
             Write unit tests
 [wip]           for utils
                 for controller
