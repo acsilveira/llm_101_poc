@@ -16,3 +16,4 @@ par__waiting_time_in_seconds = 5
 par__waiting_time_in_seconds_in_error_case = 10
 par__chunk_size = 1000
 par__chunk_overlap = 200
+par__default_llm_model_choice = "Gemini"
