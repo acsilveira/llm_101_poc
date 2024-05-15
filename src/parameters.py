@@ -11,7 +11,6 @@ par__prompt_template = """Answer the question as precise as possible using the p
                   """
 par__prompt_template_var_context = "context"
 par__prompt_template_var_input = "input"
-par__verbose_mode = True
 par__waiting_time_in_seconds = 5
 par__waiting_time_in_seconds_in_error_case = 10
 par__chunk_size = 1000
