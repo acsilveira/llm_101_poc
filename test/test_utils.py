@@ -10,16 +10,23 @@ class TestUtilsLLM:
 
         # Mock the PineconeClient and its list_indexes method
         pinecone_client_mock = MagicMock()
-        pinecone_client_mock.list_indexes.return_value.names.return_value = ["index1", "index2"]
+        pinecone_client_mock.list_indexes.return_value.names.return_value = [
+            "index1",
+            "index2",
+        ]
         utils.list_indexes = pinecone_client_mock.list_indexes
 
         # Test case where the index exists
-        result, message = utils.check_if_pinecone_index_exists(pinecone_client_mock, "index1")
+        result, message = utils.check_if_pinecone_index_exists(
+            pinecone_client_mock, "index1"
+        )
         assert result is True
         assert message == "Pinecone index exists."
 
         # Test case where the index does not exist
-        result, message = utils.check_if_pinecone_index_exists(pinecone_client_mock, "non_existent_index")
+        result, message = utils.check_if_pinecone_index_exists(
+            pinecone_client_mock, "non_existent_index"
+        )
         assert result is False
         assert message == "Pinecone index not found."
 
@@ -32,11 +39,13 @@ class TestUtilsLLM:
         utils.create_index = MagicMock()
 
         # Patch the ServerlessSpec class
-        with patch('pinecone.ServerlessSpec') as mock_serverless_spec:
+        with patch("pinecone.ServerlessSpec") as mock_serverless_spec:
             mock_serverless_spec.return_value = MagicMock()
 
             # Call the function
-            result, message = utils.create_pinecone_index(pinecone_client_mock, "index1")
+            result, message = utils.create_pinecone_index(
+                pinecone_client_mock, "index1"
+            )
 
             # Assert the function return value and message
             assert result is True

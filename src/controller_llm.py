@@ -8,7 +8,6 @@ import parameters as general_parameters
 from logging_setter import logger
 
 
-
 class ControllerLlm:
     def __init__(self, url, question):
         self._url = url
@@ -120,7 +119,10 @@ class ControllerLlm:
         # ToDo
 
         # # Check if the new index exists
-        # _, log_msg = self._utils.check_if_pinecone_index_exists(self._vector_store_client, general_parameters.par__vector_store_index_name)
+        # _, log_msg = self._utils.check_if_pinecone_index_exists(
+        # self._vector_store_client,
+        # general_parameters.par__vector_store_index_name
+        # )
         # self.utils.log(log_msg)
 
         # # Test retrieval from embeedings
@@ -137,7 +139,9 @@ class ControllerLlm:
         # self._utils.log(log_msg)
 
         # # Build chain wo retriever
-        # chain, log_msg = self.utils.build_chain_woRetriver(llm_model, prompt, general_parameters.par__prompt_template_var_context, general_parameters.par__prompt_template_var_input, text_content, self.question)
+        # chain, log_msg = self.utils.build_chain_woRetriver(llm_model,
+        # prompt, general_parameters.par__prompt_template_var_context,
+        # general_parameters.par__prompt_template_var_input, text_content, self.question)
         # self.utils.log(log_msg)
 
         # # Build chain
@@ -170,7 +174,9 @@ class ControllerLlm:
 
         try:
             self.logger.info(f"Env vars loaded: {load_dotenv()}")  # Check env_vars
-            self.logger.info(f"GOOGLE_API_KEY len: {len(os.environ.get('GOOGLE_API_KEY'))}")
+            self.logger.info(
+                f"GOOGLE_API_KEY len: {len(os.environ.get('GOOGLE_API_KEY'))}"
+            )
             self.logger.info(
                 f"PINECONE_API_KEY len: {len(os.environ.get('PINECONE_API_KEY'))}"
             )
@@ -245,9 +251,7 @@ class ControllerLlm:
 
     def upload_vectors_to_vector_store(self, chunks, embedding_model):
         vectorstore_from_docs, log_msg = self._utils.upload_vectors_to_vectorstore(
-            general_parameters.par__vector_store_index_name,
-            chunks,
-            embedding_model,
+            general_parameters.par__vector_store_index_name, chunks, embedding_model,
         )
         return vectorstore_from_docs, log_msg
 

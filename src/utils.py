@@ -146,7 +146,7 @@ class UtilsLLM:
         return embedding_model, log_msg
 
     def check_if_pinecone_index_exists(
-            self, pinecone_client, par__vector_store_index_name
+        self, pinecone_client, par__vector_store_index_name
     ):
         if par__vector_store_index_name in pinecone_client.list_indexes().names():
             log_msg = "Pinecone index exists."
@@ -159,7 +159,7 @@ class UtilsLLM:
     def create_pinecone_index(self, pinecone_client, par__vector_store_index_name):
         # If index already exists
         if self.check_if_pinecone_index_exists(
-                pinecone_client, par__vector_store_index_name
+            pinecone_client, par__vector_store_index_name
         ):
             # Delete index before create it again
             try:
@@ -186,7 +186,7 @@ class UtilsLLM:
         return True, log_msg
 
     def upload_vectors_to_vectorstore(
-            self, par__vector_store_index_name, chunks, embedding_model
+        self, par__vector_store_index_name, chunks, embedding_model
     ):
         # Upload vectors to Pinecone
         try:
@@ -271,9 +271,7 @@ class UtilsLLM:
         self.logger.info(log_msg)
         return retrieval_chain, log_msg
 
-    def build_chain_wo_retriver(
-            self, llm_model, prompt, par__prompt_template_var_input, input_question
-    ):
+    def build_chain_wo_retriver(self, llm_model, prompt, input_question):
         print(par__prompt_template_var_context + "=" + input_context[:500])
         try:
             result = llm_model.invoke(
