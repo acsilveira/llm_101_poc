@@ -1,4 +1,7 @@
 import logging.config
+import os
+
+abs_path_for_log_file = os.path.abspath("app.log")
 
 LOGGING_CONFIG = {
     "version": 1,
@@ -16,7 +19,7 @@ LOGGING_CONFIG = {
             "class": "logging.FileHandler",
             "formatter": "default",
             "level": "DEBUG",
-            "filename": "app.log",
+            "filename": abs_path_for_log_file,
         },
     },
     "root": {"level": "DEBUG", "handlers": ["console", "file"],},
