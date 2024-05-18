@@ -1,4 +1,4 @@
-LLM 101 PoC, todo
+LLM 101 PoC, ToDo
 [DONE]  Setup environment
 [DONE]      Build docker image
 [DONE]          Set env vars file
@@ -37,12 +37,21 @@ LLM 101 PoC, todo
 [DONE]              Implement mode OpenAI as LLM
 [DONE]  Logging
 [DONE]      Implement real logging
+        Implement button submit to URL input
+        Keep the URL saved to avoid upload the same content unnecessarily
         Tech debt
-            Reorg code as best practice
-                Model, View, Controller
-                SOLID
+[wip]       Reorg code as best practice
+[wip]           SOLID
+[DONE]              Understand SOLID
+[wip]               Identify improvements to respect SOLID principles
+[wip]           Model, View, Controller
+[DONE]              Move workflow to controller
+                    Find a way to show logging in the UI
+                        Re-implement logging to show to the user each step happening: https://discuss.streamlit.io/t/redirecting-logger-output-to-a-streamlit-widget/61070/2
+[wip]           Ask improvement suggestions to chatGPT or Gemini
+[wip]               Act on chatGPT suggestions: https://chatgpt.com/c/20a12a4d-c0ad-4c43-82f7-46c32e43f445
             Write unit tests
 [wip]           for utils
                 for controller
                 for app
-            Check availability of vectorstore instead of wait
+            Check availability of vector store instead of wait
