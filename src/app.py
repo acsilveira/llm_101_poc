@@ -29,7 +29,7 @@ def main():
 
     st.title("LLM very simple app")
 
-    # Shows button to upload PDF
+    # Get content source
     if st.session_state.stage < 1:
 
         st.selectbox(
@@ -77,7 +77,7 @@ def main():
         #         st.write("Please, upload a PDF file first.")
         # ---
 
-    # Shows input text to get the question
+    # Get question to be asked
     if st.session_state.stage == 1:
         placeholder_question_first = st.empty()
         with placeholder_question_first.container():
@@ -91,7 +91,7 @@ def main():
                     placeholder_question_first.empty()
                     set_state(2)
 
-    # Shows button to get the answer
+    # Confirm source and question
     if st.session_state.stage == 2:
         placeholder_confirmation = st.empty()
         with placeholder_confirmation.container():
@@ -106,6 +106,7 @@ def main():
         # Using Controller LLM
         st.session_state.ctl_llm.url = st.session_state.url_to_ask
         st.session_state.ctl_llm.question = st.session_state.question_text
+        st.session_state.ctl_llm.model_choice = st.session_state.llm_model_choice
 
         placeholder_log = st.empty()
         with placeholder_log.container():
@@ -119,16 +120,9 @@ def main():
             )
             st.markdown(f"```Starting...```")
 
-            # --- Authentication
-            _, log_msg = st.session_state.ctl_llm.authenticate()
-            st.markdown(f"```{log_msg}```")
+            result_success, answer = st.session_state.ctl_llm.ask_to_llm()
 
-            # Get text content
-            text_content, log_msg = st.session_state.ctl_llm.get_content(
-                mode="text_no_parse"
-            )
-            st.markdown(f"```{log_msg}```")
-            if not text_content:
+            if result_success == -1:
                 st.markdown(
                     ":red[This article is not accessible by me.] Sorry. Please try another article."
                     " The app will restart soon."
@@ -138,68 +132,19 @@ def main():
                     seconds_to_wait=general_parameters.par__waiting_time_in_seconds_in_error_case
                 )
                 st.experimental_rerun()
+            elif result_success == -2:
+                st.markdown(
+                    ":red[The namespace was not found in the vector store.] Sorry. Please check the connection"
+                    " with the vector store."
+                    " The app will restart soon."
+                )
+                set_state(0)
+                utils.wait_for(
+                    seconds_to_wait=general_parameters.par__waiting_time_in_seconds_in_error_case
+                )
+                st.experimental_rerun()
 
-            _, log_msg = st.session_state.ctl_llm.describe_chunks(text_content)
-            st.markdown(f"```{log_msg}```")
-
-            # Define embedding model
-            embedding_model, log_msg = st.session_state.ctl_llm.define_embedding_model()
-            st.markdown(f"```{log_msg}```")
-
-            # Create/reset vetorstore index
-            _, log_msg = st.session_state.ctl_llm.create_vector_store_index()
-            st.markdown(f"```{log_msg}```")
-
-            # Upload vectors to vetorstore
-            (
-                vectorstore_from_docs,
-                log_msg,
-            ) = st.session_state.ctl_llm.upload_vectors_to_vector_store(
-                text_content, embedding_model
-            )
-            st.markdown(f"```{log_msg}```")
-
-            # Wait some time, to have vectorstore available
-            st.markdown(
-                f"```Waiting {general_parameters.par__waiting_time_in_seconds} seconds...```"
-            )
-            utils.wait_for(
-                seconds_to_wait=general_parameters.par__waiting_time_in_seconds
-            )
-            st.markdown(f"```...continuing now.```")
-
-            # Check if the new index exists
-            _, log_msg = st.session_state.ctl_llm.check_if_vector_store_index_exists()
-            st.markdown(f"```{log_msg}```")
-
-            # Check availability of the vectorestore
-            # ToDo
-
-            # Define LLM model
-            llm_model, log_msg = st.session_state.ctl_llm.define_llm_model(
-                st.session_state.llm_model_choice
-            )
-            st.markdown(f"```{log_msg}```")
-
-            # Prepare prompt
-            prompt, log_msg = st.session_state.ctl_llm.prepare_prompt()
-            st.markdown(f"```{log_msg}```")
-
-            # Build chain
-            _, log_msg = st.session_state.ctl_llm.build_chain(
-                vectorstore_from_docs,
-                llm_model,
-                prompt,
-                st.session_state.llm_model_choice,
-            )
-            st.markdown(f"```{log_msg}```")
-
-            # Ask question about the content
-            _, answer = st.session_state.ctl_llm.ask_question_to_llm(
-                st.session_state.llm_model_choice
-            )
-            st.markdown(f"```{log_msg}```")
-
+            st.markdown("Success asking question to the LLM model.")
             placeholder_log.empty()
 
         # Present answer
@@ -210,7 +155,7 @@ def main():
             st.divider()
         st.button("Ask again", on_click=set_state, args=[4])
 
-    # Shows input text to get the question, ask again
+    # Get question for a new ask
     if st.session_state.stage == 4:
         placeholder = st.empty()
         with placeholder.container():
@@ -224,7 +169,7 @@ def main():
                     placeholder.empty()
                     set_state(5)
 
-    # Calls LLM and shows answer
+    # Calls LLM and shows answer for a new ask
     if st.session_state.stage == 5:
         st.session_state.ctl_llm.question = st.session_state.question_text
         placeholder_running_again = st.empty()
@@ -244,6 +189,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # --- Library
     utils = toolkit.UtilsLLM()
     main()

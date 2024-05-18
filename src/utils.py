@@ -135,7 +135,9 @@ class UtilsLLM:
     #             text_content += page.extract_text()
     #     return text_content
 
-    def define_embedding_model(self):
+    def define_embedding_model_google(self):
+        """ Define a google embedding model to be used to transform the content in vectors """
+
         try:
             embedding_model = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
         except Exception as e:
@@ -146,8 +148,10 @@ class UtilsLLM:
         return embedding_model, log_msg
 
     def check_if_pinecone_index_exists(
-        self, pinecone_client, par__vector_store_index_name
+            self, pinecone_client, par__vector_store_index_name
     ):
+        """ Check if a pinecone namespace exists """
+
         if par__vector_store_index_name in pinecone_client.list_indexes().names():
             log_msg = "Pinecone index exists."
             self.logger.info(log_msg)
@@ -157,9 +161,11 @@ class UtilsLLM:
         return False, log_msg
 
     def create_pinecone_index(self, pinecone_client, par__vector_store_index_name):
+        """ Create a namespace in Pinecone database """
+
         # If index already exists
         if self.check_if_pinecone_index_exists(
-            pinecone_client, par__vector_store_index_name
+                pinecone_client, par__vector_store_index_name
         ):
             # Delete index before create it again
             try:
@@ -173,8 +179,8 @@ class UtilsLLM:
         try:
             pinecone_client.create_index(
                 name=par__vector_store_index_name,
-                dimension=768,  # Replace with your model dimensions
-                metric="euclidean",  # Replace with your model metric
+                dimension=768,
+                metric="euclidean",
                 spec=ServerlessSpec(cloud="aws", region="us-east-1"),
             )
         except Exception as e:
@@ -185,12 +191,14 @@ class UtilsLLM:
         self.logger.info(log_msg)
         return True, log_msg
 
-    def upload_vectors_to_vectorstore(
-        self, par__vector_store_index_name, chunks, embedding_model
+    def upload_vectors_to_pinecone(
+            self, par__vector_store_index_name, chunks, embedding_model
     ):
+        """ Upload vectors of embedded content to Pinecone """
+
         # Upload vectors to Pinecone
         try:
-            vectorstore_from_docs = PineconeVectorStore.from_documents(
+            vectorstore_loaded = PineconeVectorStore.from_documents(
                 chunks,
                 index_name=par__vector_store_index_name,
                 embedding=embedding_model,
@@ -201,37 +209,39 @@ class UtilsLLM:
             raise e
         log_msg = "Succeed uploading vectors to vectorstore"
         self.logger.info(log_msg)
-        return vectorstore_from_docs, log_msg
+        return vectorstore_loaded, log_msg
 
-    def define_llm_model(self, llm_model_choice):
-        if llm_model_choice == "Gemini":
-            try:
-                llm_model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
-                self.logger.info("LLM model defined as Gemini")
-            except Exception as e:
-                log_msg = "Failed trying the define the llm model."
-                self.logger.error(log_msg)
-                raise e
-            log_msg = "Succeed defining the llm model"
-            self.logger.info(log_msg)
-            return llm_model, log_msg
-        elif llm_model_choice == "chatGPT":
-            try:
-                llm_model = OpenAI(model_name="gpt-3.5-turbo-0125")
-                self.logger.info("LLM model defined as chatGPT, gpt-3.5-turbo-0125")
-            except Exception as e:
-                log_msg = "Failed trying the define the llm model."
-                self.logger.error(log_msg)
-                raise e
-            log_msg = "Succeed defining the llm model"
-            self.logger.info(log_msg)
-            return llm_model, log_msg
-        else:
-            log_msg = "Unknown LLM model choice."
+    def define_llm_model_google(self):
+        """ Define the LLM model as a Google model """
+
+        try:
+            llm_model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+            self.logger.info("LLM model defined as Gemini")
+        except Exception as e:
+            log_msg = "Failed trying the define the llm model."
             self.logger.error(log_msg)
-            return None, log_msg
+            raise e
+        log_msg = "Succeed defining the llm model"
+        self.logger.info(log_msg)
+        return llm_model, log_msg
 
-    def prepare_prompt(self):
+    def define_llm_model_openai(self):
+        """ Define the LLM model as a OpenAI model """
+
+        try:
+            llm_model = OpenAI(model_name="gpt-3.5-turbo-0125")
+            self.logger.info("LLM model defined as chatGPT, gpt-3.5-turbo-0125")
+        except Exception as e:
+            log_msg = "Failed trying the define the llm model."
+            self.logger.error(log_msg)
+            raise e
+        log_msg = "Succeed defining the llm model"
+        self.logger.info(log_msg)
+        return llm_model, log_msg
+
+    def prepare_prompt_with_vector_store(self):
+        """ Prepare prompt considering the use of a vector store as a RAG """
+
         try:
             prompt = PromptTemplate(
                 template=general_parameters.par__prompt_template,
@@ -248,21 +258,11 @@ class UtilsLLM:
         self.logger.info(log_msg)
         return prompt, log_msg
 
-    def build_chain_gemini(self, vectorstore_from_docs, llm_model, prompt):
-        try:
-            retriever = vectorstore_from_docs.as_retriever()
-            combine_docs_chain = create_stuff_documents_chain(llm_model, prompt)
-            retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
-        except Exception as e:
-            raise e
-        log_msg = "Succeed building chain"
-        self.logger.info(log_msg)
-        return retrieval_chain, log_msg
+    def build_retrieved_documents_chain(self, vector_store_loaded_client, llm_model, prompt):
+        """ Build a chain to ask questions to a LLM model using documents retrieved from a vector store as input """
 
-    def build_chain_chat_gpt(self, vectorstore_from_docs, llm_model, prompt):
         try:
-            # retrieval_chain = create_retrieval_chain(llm_model, vector_store_client, embedding_model)
-            retriever = vectorstore_from_docs.as_retriever()
+            retriever = vector_store_loaded_client.as_retriever()
             combine_docs_chain = create_stuff_documents_chain(llm_model, prompt)
             retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
         except Exception as e:
@@ -283,20 +283,9 @@ class UtilsLLM:
         self.logger.info(log_msg)
         return result, log_msg
 
-    def asking_question_about_content_gemini(self, retrieval_chain, question):
-        try:
-            answer_about_content = retrieval_chain.invoke(
-                {general_parameters.par__prompt_template_var_input: question}
-            )
-        except Exception as e:
-            log_msg = "Failed asking question about content"
-            self.logger.error(log_msg)
-            raise e
-        log_msg = "Succeed asking question about content for Gemini"
-        self.logger.info(log_msg)
-        return answer_about_content, log_msg
+    def asking_question_about_content_using_retrieved_documents_chain(self, retrieval_chain, question):
+        """ Ask a question to a LLM model using a retrieved documents chain """
 
-    def asking_question_about_content_chat_gpt(self, retrieval_chain, question):
         try:
             answer_about_content = retrieval_chain.invoke(
                 {general_parameters.par__prompt_template_var_input: question}
@@ -305,7 +294,7 @@ class UtilsLLM:
             log_msg = "Failed asking question about content"
             self.logger.error(log_msg)
             raise e
-        log_msg = "Succeed asking question about content for chatGPT"
+        log_msg = "Succeed asking question about content using a retrieved documents chain"
         self.logger.info(log_msg)
         return answer_about_content, log_msg
 
@@ -325,7 +314,7 @@ class UtilsLLM:
             chunk_overlap=general_parameters.par__chunk_overlap,
         )
         chunks = text_splitter.create_documents([raw_text_content])
-        log_msg = "Text splitted into chunks with success."
+        log_msg = "Text split into chunks with success."
         self.logger.info(log_msg)
         return chunks, log_msg
 
