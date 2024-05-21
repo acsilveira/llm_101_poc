@@ -361,8 +361,7 @@ class UtilsLLM:
 
     def get_text_from_web_article_parsing_text(self, url):
         text_content, log_msg = self.get_text_from_web_article(url)
-        ..continuing
-        now.        chunks, log_msg = self.split_text_into_chunks(text_content)
+        chunks, log_msg = self.split_text_into_chunks(text_content)
         return chunks, log_msg
 
     @staticmethod
