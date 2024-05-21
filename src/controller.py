@@ -1,7 +1,6 @@
 import google.generativeai as genai
 import os
 from dotenv import load_dotenv
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from pinecone import Pinecone
 import utils as toolkit
 import parameters as general_parameters
@@ -297,8 +296,8 @@ class Controller:
 
         # Prepare LLM chain
         if not self._chain_is_prepared or self.model_choice != llm_model_choice:
-            self.model_choice = model_to_ask
-            self.prepare_LLM_chain(self.vector_store_loaded_client)
+            self.model_choice = llm_model_choice
+            self.prepare_llm_chain(self.vector_store_loaded_client)
             self.logger.info(f"Succeed reseting chain for model: {llm_model_choice}.")
         else:
             self.logger.info("Chain is already set. Reusing it.")
@@ -368,7 +367,7 @@ class Controller:
         )
         return result_success
 
-    def prepare_LLM_chain(self, vector_store_loaded_client):
+    def prepare_llm_chain(self, vector_store_loaded_client):
         """ Prepare LLM model, prompt and chain """
 
         # Define LLM model
