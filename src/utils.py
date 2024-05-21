@@ -197,10 +197,14 @@ class UtilsLLM:
             # Delete index before create it again
             index_name_to_be_deleted = self.get_current_index_pinecone(pinecone_client)
             if not index_name_to_be_deleted:
-                raise Exception("More than one index found in vector store. The expectation to find only 1 index.")
+                raise Exception(
+                    "More than one index found in vector store. The expectation to find only 1 index."
+                )
             try:
                 pinecone_client.delete_index(index_name_to_be_deleted)
-                self.logger.info(f"Index {index_name_to_be_deleted} deleted of vector store.")
+                self.logger.info(
+                    f"Index {index_name_to_be_deleted} deleted of vector store."
+                )
             except Exception as e:
                 log_msg = "Failed trying to delete pinecone index"
                 self.logger.error(log_msg)
@@ -357,9 +361,8 @@ class UtilsLLM:
 
     def get_text_from_web_article_parsing_text(self, url):
         text_content, log_msg = self.get_text_from_web_article(url)
-        self.logger.info(log_msg)
-        chunks, log_msg = self.split_text_into_chunks(text_content)
-        self.logger.info(log_msg)
+        ..continuing
+        now.        chunks, log_msg = self.split_text_into_chunks(text_content)
         return chunks, log_msg
 
     @staticmethod
@@ -389,7 +392,9 @@ class UtilsLLM:
     def get_current_index_pinecone(self, pinecone_client):
         indexes_found = pinecone_client.list_indexes().names()
         if len(indexes_found) > 1:
-            self.logger.error("More than 1 index found in vector store. Not clear which index to return.")
+            self.logger.error(
+                "More than 1 index found in vector store. Not clear which index to return."
+            )
             return None
         elif len(indexes_found) < 1:
             self.logger.error("No index was found in vector store. No index to return.")
@@ -397,3 +402,27 @@ class UtilsLLM:
         else:
             self.logger.debug(f"Index found and returned: {indexes_found[0]}.")
             return indexes_found[0]
+
+    def describe_chunks(self, chunks):
+        """ Check and print metrics about the text chunks """
+
+        content = "\n".join(str(p.page_content) for p in chunks)
+        log_msg = ""
+        log_msg += f"Total of words in the content: {len(content)}"
+        log_msg += f", and total of chunks: {len(chunks)}"
+        self.logger.info(log_msg)
+        return None, log_msg
+
+    def split_documents_into_chunks(
+        self, documents_content, parr_chunk_size=500, parr_chunk_overlap=50
+    ):
+        try:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=parr_chunk_size, chunk_overlap=parr_chunk_overlap
+            )
+            chunks = text_splitter.split_documents(documents_content)
+            log_msg = "Documents splitted into chunks with success."
+            self.logger.info(log_msg)
+            return chunks, log_msg
+        except Exception as e:
+            raise e
