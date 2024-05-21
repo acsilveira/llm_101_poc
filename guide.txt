@@ -38,12 +38,16 @@ LLM 101 PoC, ToDo
 [DONE]  Logging
 [DONE]      Implement real logging
 [DONE]  Implement button submit to URL input
-*       Keep the URL saved to avoid upload the same content unnecessarily
+[DONE]  Keep the URL saved to avoid upload the same content unnecessarily
 [DONE]      Fix deletion
-[wip]       Check and reorg code
-        Re-allow content by PDF upload
-        Show in the UI: the model choice, URL
-        Allow UI change the model choice for further questions
+[DONE]      Check and reorg code
+[DONE]  Re-allow content by PDF upload
+[DONE]      Front-end
+[DONE]      Back-end
+*       Show in the UI: the model choice, URL
+            Change model choice to radio element
+            Create another choice for "all text" and "text filtered by relevance"
+*       Allow UI change the model choice for further questions
         Allow question inputting all(limited) content
         Find a way to show logging in the UI
             Re-implement logging to show to the user each step happening: https://discuss.streamlit.io/t/redirecting-logger-output-to-a-streamlit-widget/61070/2

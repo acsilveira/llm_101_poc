@@ -2,6 +2,7 @@ import streamlit as st
 import controller as controller_llm
 import utils as toolkit
 import parameters as general_parameters
+import pdfplumber
 
 
 def main():
@@ -11,9 +12,16 @@ def main():
     def set_llm_model_choice():
         st.session_state.llm_model_choice = st.session_state["element_llm_model_choice"]
 
+    def set_source_type_choice():
+        st.session_state.source_type_choice = st.session_state[
+            "element_source_type_choice"
+        ]
+
     # Control UI stages
     if "stage" not in st.session_state:
         st.session_state.stage = 0
+    if "content_ref_to_ask" not in st.session_state:
+        st.session_state.content_ref_to_ask = False
     if "pdf_file_ref" not in st.session_state:
         st.session_state.pdf_file_ref = False
     if "question_text" not in st.session_state:
@@ -26,6 +34,10 @@ def main():
         st.session_state.llm_model_choice = (
             general_parameters.par__default_llm_model_choice
         )
+    if "source_type_choice" not in st.session_state:
+        st.session_state.source_type_choice = (
+            general_parameters.par__default_source_type_choice
+        )
 
     st.title("LLM very simple app")
 
@@ -35,56 +47,62 @@ def main():
     if st.session_state.stage < 1:
 
         st.selectbox(
-            "LLM being used:",
+            "LLM being used",
             ("Gemini", "chatGPT"),
             on_change=set_llm_model_choice,
             key="element_llm_model_choice",
         )
+        st.radio(
+            "Source type",
+            ["URL", "PDF"],
+            on_change=set_source_type_choice,
+            key="element_source_type_choice",
+        )
 
         placeholder_url = st.empty()
         with placeholder_url.container():
-            st.subheader("Article URL")
-            st.write("What article do you want ask about?")
-            with st.form("form_content_url", border=False, clear_on_submit=True):
-                url_to_ask = st.text_input("URL:")
-                submitted = st.form_submit_button("Submit")
-                if submitted:
-                    if not url_to_ask:
-                        url_to_ask = general_parameters.par__default_url_content_to_test
-                    st.session_state.url_to_ask = url_to_ask
-                    placeholder_url.empty()
-                    set_state(1)
-
-        # --- PDF upload
-        # st.subheader("PDF file")
-        # st.write("Upload a PDF file needed to answer your question:")
-        # file_ref = st.file_uploader(
-        #     "Upload PDF", type=["pdf"])
-        # st.session_state.pdf_file_ref = file_ref
-
-        # if st.button("Process"):
-        #     if file_ref is not None:
-        #         # Shows pdf file metadata
-        #         file_details = {
-        #             "filename": file_ref.name,
-        #             "filetype": file_ref.type,
-        #             "filesize": file_ref.size,
-        #         }
-        #         st.write(file_details)
-
-        #         try:
-        #             with pdfplumber.open(file_ref) as f:
-        #                 pages = f.pages[0]
-        #                 st.subheader("Page 1:")
-        #                 st.write(pages.extract_text())
-        #         except Exception as e:
-        #             st.write(">>Error loading pdf file.")
-        #             raise e
-
-        #         set_state(1)
-        #     else:
-        #         st.write("Please, upload a PDF file first.")
-        # ---
+            if st.session_state.source_type_choice == "URL":
+                st.subheader("Article URL")
+                st.write("What article do you want ask about?")
+                with st.form("form_content_url", border=False, clear_on_submit=True):
+                    url_to_ask = st.text_input("URL:")
+                    submitted = st.form_submit_button("Submit")
+                    if submitted:
+                        if not url_to_ask:
+                            url_to_ask = (
+                                general_parameters.par__default_url_content_to_test
+                            )
+                        st.session_state.content_ref_to_ask = url_to_ask
+                        placeholder_url.empty()
+                        set_state(1)
+            elif st.session_state.source_type_choice == "PDF":
+                st.subheader("PDF file")
+                st.write("Upload a PDF file to ask about:")
+                file_ref = st.file_uploader("Upload PDF", type=["pdf"])
+                if st.button("Process"):
+                    if file_ref is not None:
+                        st.session_state.content_ref_to_ask = file_ref.name
+                        st.session_state.pdf_file_ref = file_ref
+                        # Shows pdf file metadata
+                        file_details = {
+                            "filename": file_ref.name,
+                            "filetype": file_ref.type,
+                            "filesize": file_ref.size,
+                        }
+                        st.write(file_details)
+                        try:
+                            with pdfplumber.open(file_ref) as f:
+                                pages = f.pages[0]
+                                st.subheader("Page 1:")
+                                st.write(pages.extract_text())
+                        except Exception as e:
+                            st.write(">>Error loading pdf file.")
+                            raise e
+                        set_state(1)
+                    else:
+                        st.write("Please, upload a PDF file first.")
+            else:
+                st.write(":red[Unknown content type.]")
 
     # --------------------------------------------------
     # Screen: Get question to be asked
@@ -110,7 +128,7 @@ def main():
         with placeholder_confirmation.container():
             st.markdown(
                 f"You would ask **{st.session_state.question_text}** about the article in "
-                f"```{st.session_state.url_to_ask}```. "
+                f"```{st.session_state.content_ref_to_ask}```. "
             )
             st.button("Ask to LLM", on_click=set_state, args=[3])
 
@@ -133,9 +151,11 @@ def main():
             # ToDo: Show logs to the user
 
             result_success, answer = st.session_state.ctl_llm.ask_to_llm(
-                st.session_state.url_to_ask,
+                st.session_state.content_ref_to_ask,
                 st.session_state.question_text,
                 st.session_state.llm_model_choice,
+                st.session_state.source_type_choice,
+                st.session_state.pdf_file_ref,
             )
 
             if result_success == -1:
@@ -159,6 +179,9 @@ def main():
                     seconds_to_wait=general_parameters.par__waiting_time_in_seconds_in_error_case
                 )
                 st.experimental_rerun()
+            elif result_success == -3:
+                st.markdown(":red[Unknown content type.] Sorry. This is not expected.")
+                raise Exception("Unknown content type to get content from.")
 
             st.markdown("Success asking question to the LLM model.")
             placeholder_log.empty()
