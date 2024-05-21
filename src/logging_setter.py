@@ -23,8 +23,19 @@ LOGGING_CONFIG = {
         },
     },
     "root": {"level": "DEBUG", "handlers": ["console", "file"],},
+    "loggers": {
+        "pdfplumber": {
+            "level": "WARNING",
+            "handlers": ["console", "file"],
+            "propagate": False,
+        },
+        "pdfminer": {
+            "level": "WARNING",
+            "handlers": ["console", "file"],
+            "propagate": False,
+        }
+    },
 }
 
 logging.config.dictConfig(LOGGING_CONFIG)
-
 logger = logging.getLogger()

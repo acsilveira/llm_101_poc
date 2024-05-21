@@ -8,8 +8,9 @@ from logging_setter import logger
 
 
 class Controller:
-    def __init__(self, url, question):
-        self._url = url
+    def __init__(self, content_ref, question):
+        self._content_ref = content_ref
+        self._pdf_file_ref = None
         self._question = question
         self._model_choice = None
         self._utils = toolkit.UtilsLLM()
@@ -25,8 +26,12 @@ class Controller:
         self._chain_is_prepared = False
 
     @property
-    def url(self):
-        return self._url
+    def content_ref(self):
+        return self._content_ref
+
+    @property
+    def pdf_file_ref(self):
+        return self._pdf_file_ref
 
     @property
     def question(self):
@@ -64,9 +69,13 @@ class Controller:
     def embedding_model(self):
         return self._embedding_model
 
-    @url.setter
-    def url(self, value):
-        self._url = value
+    @content_ref.setter
+    def content_ref(self, value):
+        self._content_ref = value
+
+    @pdf_file_ref.setter
+    def pdf_file_ref(self, value):
+        self._pdf_file_ref = value
 
     @question.setter
     def question(self, value):
@@ -104,85 +113,14 @@ class Controller:
     def embedding_model(self, value):
         self._embedding_model = value
 
-    def main(self):
-        # self._utils.log("Starting...")
-
-        # # --- Authentication
-        # _, log_msg = self.authenticate()
-        # self._utils.log(log_msg) if self._verbose_mode else None
-        #
-        # # Get text content
-        # text_content, log_msg = self.get_content()
-        # self._utils.log(log_msg) if self._verbose_mode else None
-
-        # # Split content in chunks
-        # # chunks, log_msg = self.split_text_into_chunks(text_content)
-        # # chunks, log_msg = self.split_documents_into_chunks(text_content)
-        # chunks, log_msg = text_content, "Using chunks only by HTML header"
-        # self._utils.log(log_msg)
-        # content = "\n".join(str(p.page_content) for p in chunks)
-        # self._utils.log(f"The total words in the content is: {len(content)}")
-        # self._utils.log(f"The total chunks in the content is: {len(chunks)}")
-
-        # # Define the embedding model
-        # embedding_model, log_msg = self.define_embedding_model()
-        # self._utils.log(log_msg)
-
-        # # Create/reset vetorstore index
-        # _, log_msg = self._utils.create_pinecone_index(
-        #     self._vector_store_client, general_parameters.par__vector_store_index_name
-        # )
-        # self._utils.log(log_msg)
-
-        # # Upload vectors to vetorstore
-        # vectorstore_from_docs, log_msg = self._utils.upload_vectors_to_vectorstore(
-        #     self._vector_store_client, general_parameters.par__vector_store_index_name, chunks, embedding_model
-        # )
-        # self._utils.log(log_msg)
-
-        # # Wait some time, to have vectorstore available
-        # self._utils.wait_for(seconds_to_wait=5)
-
-        # ToDo: Check availability of the vectorestore
-
-        # # Check if the new index exists
-        # _, log_msg = self._utils.check_if_pinecone_index_exists(
-        # self._vector_store_client,
-        # general_parameters.par__vector_store_index_name
-        # )
-        # self.utils.log(log_msg)
-
-        # # Test retrieval from embeedings
-        # query = "disability"
-        # result = vectorstore_from_docs.similarity_search(query)
-        # print(result)
-
-        # # Define LLM model
-        # llm_model, log_msg = self._utils.define_llm_model()
-        # self._utils.log(log_msg)
-
-        # # Prepare prompt
-        # prompt, log_msg = self._utils.prepare_prompt()
-        # self._utils.log(log_msg)
-
-        # # Build chain wo retriever
-        # chain, log_msg = self.utils.build_chain_woRetriver(llm_model,
-        # prompt, general_parameters.par__prompt_template_var_context,
-        # general_parameters.par__prompt_template_var_input, text_content, self.question)
-        # self.utils.log(log_msg)
-
-        # # Build chain
-        # self._chain, log_msg = self._utils.build_chain(vectorstore_from_docs, llm_model, prompt)
-        # self.chain_ready = True
-        # self._utils.log(log_msg)
-
-        # # Ask question about the content
-        # _, answer = self.ask_question_to_llm()
-        # answer, log_msg = self._utils.asking_question_about_content(self._chain, self._question)
-        # self._utils.log("Question asked and answer received.")
-        pass
-
-    def ask_to_llm(self, url_to_ask, question_to_ask, model_to_ask):
+    def ask_to_llm(
+        self,
+        content_to_ask,
+        question_to_ask,
+        model_to_ask,
+        content_type_to_ask,
+        pdf_file_ref,
+    ):
         """ Ask a question about a content to a LLM model """
 
         # Authenticate
@@ -195,26 +133,29 @@ class Controller:
         _, _ = self.define_embedding_model()
 
         # Prepare content
-        if not self.check_if_vector_store_index_already_exists_for_this_url(url_to_ask):
+        if not self.check_if_vector_store_index_already_exists_for_this_url(
+            content_to_ask
+        ):
             self.logger.info(
                 "Once the URL-based index was not found, preparing the vector store for a new content"
             )
-            self.url = url_to_ask
+            self.content_ref = content_to_ask
+            self.pdf_file_ref = pdf_file_ref
             (
                 return_success,
                 log_msg,
                 self.vector_store_loaded_client,
-            ) = self.prepare_content_in_vector_store()
+            ) = self.prepare_content_in_vector_store(content_type_to_ask)
             if return_success < 0:
                 return return_success, log_msg
         else:
             self.logger.info(
                 "Vector store already fulfilled with this URL content. Setting client to respective index..."
             )
-            if not self.url:
-                self.url = url_to_ask
+            if not self.content_ref:
+                self.content_ref = content_to_ask
             self.vector_store_loaded_client = self.utils.set_vector_store_client_to_specific_index(
-                self.url, self.embedding_model
+                self.content_ref, self.embedding_model
             )
 
         # Ask question about the content
@@ -255,12 +196,17 @@ class Controller:
         self.logger.debug(f"Embedding model defined: {self.embedding_model}")
         return embedding_model, log_msg
 
-    def prepare_content_in_vector_store(self):
+    def prepare_content_in_vector_store(self, content_type):
         """ Get content, apply embedding and save vectors in a vector store """
 
         self.logger.info("Preparing vector store...")
         # Get text content
-        text_content, log_msg = self.get_content(mode="text_no_parse")
+        if content_type == "URL":
+            text_content, log_msg = self.get_content(mode="text_no_parse")
+        elif content_type == "PDF":
+            text_content, log_msg = self.get_content(mode="pdf_text")
+        else:
+            return -3, "Unknown type of content", None
         if not text_content:
             return -1, "Content not accessible", None
 
@@ -281,7 +227,7 @@ class Controller:
 
         # Check if the new index exists
         result_success = self.check_if_vector_store_index_already_exists_for_this_url(
-            self.url
+            self.content_ref
         )
         if not result_success:
             return -2, "Namespace does not exist in vector store", None
@@ -315,19 +261,25 @@ class Controller:
         self.logger.info(answer)
         return True, answer
 
-    def get_content(self, mode="html_parse"):
+    def get_content(self, mode):
         """ Get text content from a source """
 
         if mode == "html_parse":
             (
                 text_content,
                 log_msg,
-            ) = self._utils.get_text_from_web_article_parsing_html_langchain(self.url)
+            ) = self._utils.get_text_from_web_article_parsing_html_langchain(
+                self.content_ref
+            )
         elif mode == "text_no_parse":
             (
                 text_content,
                 log_msg,
-            ) = self._utils.get_text_from_web_article_parsing_text(self.url)
+            ) = self._utils.get_text_from_web_article_parsing_text(self.content_ref)
+        elif mode == "pdf_text":
+            (text_content, log_msg,) = self._utils.get_text_from_pdf_pdfplumber(
+                self.pdf_file_ref
+            )
         else:
             self.logger.error("Unknown mode to get content")
             return None, "Unknown mode to get content."
@@ -337,7 +289,7 @@ class Controller:
         """ Create a namespace in a vector database """
 
         # Prepare index name
-        hashed_index_name = self._utils.apply_hash_md5(self.url)
+        hashed_index_name = self._utils.apply_hash_md5(self.content_ref)
 
         _, log_msg = self._utils.create_pinecone_index(
             self._vector_store_client, hashed_index_name
@@ -348,7 +300,7 @@ class Controller:
         """ Upload vectors of the content embedded to a vector database """
 
         vectorstore_loaded, log_msg = self._utils.upload_vectors_to_pinecone(
-            self.utils.apply_hash_md5(self.url), chunks, embedding_model,
+            self.utils.apply_hash_md5(self.content_ref), chunks, embedding_model,
         )
         return vectorstore_loaded, log_msg
 

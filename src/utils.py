@@ -1,11 +1,5 @@
-# import textwrap
-# from IPython.display import Markdown
-# import requests
-# from bs4 import BeautifulSoup
-# from PyPDF2 import PdfReader
-# import pdfplumber
+import pdfplumber
 import hashlib
-
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
@@ -32,12 +26,6 @@ class UtilsLLM:
     def __init__(self):
         self.logger = logger
         self.logger.info("Utils initialized")
-
-    # def to_markdown(self, text):
-    #     """ Interpret string as markdown """
-    #
-    #     text = text.replace("•", "  *")
-    #     return Markdown(textwrap.indent(text, "> ", predicate=lambda _: True))
 
     def get_text_from_web_article_parsing_html_langchain(self, url):
         """ Get text from a web URL article, parsing HTML with LangChain"""
@@ -114,28 +102,17 @@ class UtilsLLM:
             self.logger.error(log_msg)
             raise e
 
-    # def read_pdf(self, file_path):
-    #     """ Read a pdf file and get its content """
-    #
-    #     pdf_reader = PdfReader(file_path)
-    #     file_text_content = pdf_reader
-    #     text_content = ""
-    #     number_of_pages = len(pdf_reader.pages)
-    #     for i_page in range(number_of_pages):
-    #         page = pdf_reader.pages[i_page]
-    #         text_content += page.extract_text()
-    #     return text_content
+    def get_text_from_pdf_pdfplumber(self, file_path):
+        """ Read a pdf file and get its content using pdf plumber"""
 
-    # def read_pdf_pdfplumber(self, file_path):
-    #     """ Read a pdf file and get its content using pdf plumber"""
-    #
-    #     with pdfplumber.open(file_path) as f:
-    #         number_of_pages = len(f.pages)
-    #         text_content = ""
-    #         for i_page in range(number_of_pages):
-    #             page = f.pages[i_page]
-    #             text_content += page.extract_text()
-    #     return text_content
+        with pdfplumber.open(file_path) as f:
+            number_of_pages = len(f.pages)
+            text_content = ""
+            for i_page in range(number_of_pages):
+                page = f.pages[i_page]
+                text_content += page.extract_text()
+            chunks, log_msg = self.split_text_into_chunks(text_content)
+        return chunks, log_msg
 
     def define_embedding_model_google(self):
         """ Define a google embedding model to be used to transform the content in vectors """
