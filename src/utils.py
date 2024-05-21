@@ -1,9 +1,5 @@
-# import textwrap
-# from IPython.display import Markdown
-# import requests
-# from bs4 import BeautifulSoup
-# from PyPDF2 import PdfReader
-# import pdfplumber
+import pdfplumber
+import hashlib
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from pinecone import Pinecone, ServerlessSpec
 from langchain_pinecone import PineconeVectorStore
@@ -30,12 +26,6 @@ class UtilsLLM:
     def __init__(self):
         self.logger = logger
         self.logger.info("Utils initialized")
-
-    # def to_markdown(self, text):
-    #     """ Interpret string as markdown """
-    #
-    #     text = text.replace("•", "  *")
-    #     return Markdown(textwrap.indent(text, "> ", predicate=lambda _: True))
 
     def get_text_from_web_article_parsing_html_langchain(self, url):
         """ Get text from a web URL article, parsing HTML with LangChain"""
@@ -112,28 +102,17 @@ class UtilsLLM:
             self.logger.error(log_msg)
             raise e
 
-    # def read_pdf(self, file_path):
-    #     """ Read a pdf file and get its content """
-    #
-    #     pdf_reader = PdfReader(file_path)
-    #     file_text_content = pdf_reader
-    #     text_content = ""
-    #     number_of_pages = len(pdf_reader.pages)
-    #     for i_page in range(number_of_pages):
-    #         page = pdf_reader.pages[i_page]
-    #         text_content += page.extract_text()
-    #     return text_content
+    def get_text_from_pdf_pdfplumber(self, file_path):
+        """ Read a pdf file and get its content using pdf plumber"""
 
-    # def read_pdf_pdfplumber(self, file_path):
-    #     """ Read a pdf file and get its content using pdf plumber"""
-    #
-    #     with pdfplumber.open(file_path) as f:
-    #         number_of_pages = len(f.pages)
-    #         text_content = ""
-    #         for i_page in range(number_of_pages):
-    #             page = f.pages[i_page]
-    #             text_content += page.extract_text()
-    #     return text_content
+        with pdfplumber.open(file_path) as f:
+            number_of_pages = len(f.pages)
+            text_content = ""
+            for i_page in range(number_of_pages):
+                page = f.pages[i_page]
+                text_content += page.extract_text()
+            chunks, log_msg = self.split_text_into_chunks(text_content)
+        return chunks, log_msg
 
     def define_embedding_model_google(self):
         """ Define a google embedding model to be used to transform the content in vectors """
@@ -147,29 +126,62 @@ class UtilsLLM:
         self.logger.info(log_msg)
         return embedding_model, log_msg
 
-    def check_if_pinecone_index_exists(
-            self, pinecone_client, par__vector_store_index_name
+    def check_if_a_specific_index_exists_in_pinecone(
+        self, pinecone_client, par__vector_store_index_name
     ):
-        """ Check if a pinecone namespace exists """
+        """ Check if a specific index name exists in Pinecone """
 
+        self.logger.debug(f"Looking for {par__vector_store_index_name}")
+        self.logger.debug(f"... in {pinecone_client.list_indexes().names()}")
         if par__vector_store_index_name in pinecone_client.list_indexes().names():
-            log_msg = "Pinecone index exists."
+            log_msg = "Specific index name exists in Pinecone"
             self.logger.info(log_msg)
-            return True, log_msg
-        log_msg = "Pinecone index not found."
-        self.logger.error(log_msg)
-        return False, log_msg
+            return True
+        log_msg = "Specific index name not found in Pinecone"
+        self.logger.info(log_msg)
+        return False
+
+    def check_if_any_index_exists_in_pinecone(self, pinecone_client):
+        """ Check if any index exists in Pinecone """
+
+        total_of_indexes_found = len(pinecone_client.list_indexes().names())
+        self.logger.debug(
+            f"Total of indexes found in Pinecone: {total_of_indexes_found}"
+        )
+        if total_of_indexes_found > 0:
+            log_msg = "Some index exist in Pinecone"
+            self.logger.info(log_msg)
+            return True
+        log_msg = "No index was found in Pinecone"
+        self.logger.info(log_msg)
+        return False
+
+    @staticmethod
+    def list_pinecone_index_names(pinecone_client):
+        """ List the indexes existing in a Pinecone project """
+
+        return pinecone_client.list_indexes().names()
 
     def create_pinecone_index(self, pinecone_client, par__vector_store_index_name):
         """ Create a namespace in Pinecone database """
 
-        # If index already exists
-        if self.check_if_pinecone_index_exists(
-                pinecone_client, par__vector_store_index_name
+        # If exists some index and it is not the same that need to be created
+        if self.check_if_any_index_exists_in_pinecone(
+            pinecone_client
+        ) and not self.check_if_a_specific_index_exists_in_pinecone(
+            pinecone_client, par__vector_store_index_name
         ):
             # Delete index before create it again
+            index_name_to_be_deleted = self.get_current_index_pinecone(pinecone_client)
+            if not index_name_to_be_deleted:
+                raise Exception(
+                    "More than one index found in vector store. The expectation to find only 1 index."
+                )
             try:
-                pinecone_client.delete_index(par__vector_store_index_name)
+                pinecone_client.delete_index(index_name_to_be_deleted)
+                self.logger.info(
+                    f"Index {index_name_to_be_deleted} deleted of vector store."
+                )
             except Exception as e:
                 log_msg = "Failed trying to delete pinecone index"
                 self.logger.error(log_msg)
@@ -192,7 +204,7 @@ class UtilsLLM:
         return True, log_msg
 
     def upload_vectors_to_pinecone(
-            self, par__vector_store_index_name, chunks, embedding_model
+        self, par__vector_store_index_name, chunks, embedding_model
     ):
         """ Upload vectors of embedded content to Pinecone """
 
@@ -258,7 +270,9 @@ class UtilsLLM:
         self.logger.info(log_msg)
         return prompt, log_msg
 
-    def build_retrieved_documents_chain(self, vector_store_loaded_client, llm_model, prompt):
+    def build_retrieved_documents_chain(
+        self, vector_store_loaded_client, llm_model, prompt
+    ):
         """ Build a chain to ask questions to a LLM model using documents retrieved from a vector store as input """
 
         try:
@@ -283,7 +297,9 @@ class UtilsLLM:
         self.logger.info(log_msg)
         return result, log_msg
 
-    def asking_question_about_content_using_retrieved_documents_chain(self, retrieval_chain, question):
+    def asking_question_about_content_using_retrieved_documents_chain(
+        self, retrieval_chain, question
+    ):
         """ Ask a question to a LLM model using a retrieved documents chain """
 
         try:
@@ -294,7 +310,9 @@ class UtilsLLM:
             log_msg = "Failed asking question about content"
             self.logger.error(log_msg)
             raise e
-        log_msg = "Succeed asking question about content using a retrieved documents chain"
+        log_msg = (
+            "Succeed asking question about content using a retrieved documents chain"
+        )
         self.logger.info(log_msg)
         return answer_about_content, log_msg
 
@@ -320,7 +338,67 @@ class UtilsLLM:
 
     def get_text_from_web_article_parsing_text(self, url):
         text_content, log_msg = self.get_text_from_web_article(url)
-        self.logger.info(log_msg)
         chunks, log_msg = self.split_text_into_chunks(text_content)
-        self.logger.info(log_msg)
         return chunks, log_msg
+
+    @staticmethod
+    def apply_hash_md5(string_to_hash):
+        """ Apply a hash to a string """
+
+        md5_hash = hashlib.md5()
+        md5_hash.update(string_to_hash.encode("utf-8"))
+        return md5_hash.hexdigest()
+
+    def set_vector_store_client_to_specific_index(self, url, embedding_model):
+        """ Return a Pinecone client set for a specific index """
+
+        try:
+            index_name_from_url_hashed = self.apply_hash_md5(url)
+            vectorstore_loaded = PineconeVectorStore.from_existing_index(
+                index_name=index_name_from_url_hashed, embedding=embedding_model
+            )
+        except Exception as e:
+            log_msg = "Failed setting Pinecone client to a specific index"
+            self.logger.error(log_msg)
+            raise e
+        log_msg = "Succeed setting Pinecone client to a specific index"
+        self.logger.info(log_msg)
+        return vectorstore_loaded
+
+    def get_current_index_pinecone(self, pinecone_client):
+        indexes_found = pinecone_client.list_indexes().names()
+        if len(indexes_found) > 1:
+            self.logger.error(
+                "More than 1 index found in vector store. Not clear which index to return."
+            )
+            return None
+        elif len(indexes_found) < 1:
+            self.logger.error("No index was found in vector store. No index to return.")
+            return None
+        else:
+            self.logger.debug(f"Index found and returned: {indexes_found[0]}.")
+            return indexes_found[0]
+
+    def describe_chunks(self, chunks):
+        """ Check and print metrics about the text chunks """
+
+        content = "\n".join(str(p.page_content) for p in chunks)
+        log_msg = ""
+        log_msg += f"Total of words in the content: {len(content)}"
+        log_msg += f", and total of chunks: {len(chunks)}"
+        self.logger.info(log_msg)
+        return None, log_msg
+
+    def split_documents_into_chunks(
+        self, documents_content, parr_chunk_size=500, parr_chunk_overlap=50
+    ):
+        try:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=parr_chunk_size, chunk_overlap=parr_chunk_overlap
+            )
+            chunks = text_splitter.split_documents(documents_content)
+            log_msg = "Documents splitted into chunks with success."
+            self.logger.info(log_msg)
+            return chunks, log_msg
+        except Exception as e:
+            raise e
