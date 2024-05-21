@@ -8,18 +8,22 @@ import parameters as general_parameters
 from logging_setter import logger
 
 
-class ControllerLlm:
+class Controller:
     def __init__(self, url, question):
         self._url = url
         self._question = question
         self._model_choice = None
         self._utils = toolkit.UtilsLLM()
         self._vector_store_client = None
+        self._vector_store_loaded_client = None
+        self._embedding_model = None
         self._chain = None
         self._verbose_mode = True
         self._chain_ready = False
         self.logger = logger
         self.logger.info("Controller initialized")
+        self._is_authenticated = False
+        self._chain_is_prepared = False
 
     @property
     def url(self):
@@ -42,6 +46,10 @@ class ControllerLlm:
         return self._vector_store_client
 
     @property
+    def vector_store_loaded_client(self):
+        return self._vector_store_loaded_client
+
+    @property
     def chain(self):
         return self._chain
 
@@ -52,6 +60,10 @@ class ControllerLlm:
     @property
     def chain_ready(self):
         return self._chain_ready
+
+    @property
+    def embedding_model(self):
+        return self._embedding_model
 
     @url.setter
     def url(self, value):
@@ -73,6 +85,10 @@ class ControllerLlm:
     def vector_store_client(self, value):
         self._vector_store_client = value
 
+    @vector_store_loaded_client.setter
+    def vector_store_loaded_client(self, value):
+        self._vector_store_loaded_client = value
+
     @chain.setter
     def chain(self, value):
         self._chain = value
@@ -84,6 +100,11 @@ class ControllerLlm:
     @chain_ready.setter
     def chain_ready(self, value):
         self._chain_ready = value
+
+    @embedding_model.setter
+    def embedding_model(self, value):
+        self._embedding_model = value
+
 
     def main(self):
         # self._utils.log("Starting...")
@@ -164,27 +185,53 @@ class ControllerLlm:
         # self._utils.log("Question asked and answer received.")
         pass
 
-    def ask_to_llm(self):
+    def ask_to_llm(self, url_to_ask, question_to_ask, model_to_ask):
         """ Ask a question about a content to a LLM model """
 
         # Authenticate
-        _, log_msg = self.authenticate()
+        if not self._is_authenticated:
+            _, log_msg = self.authenticate()
+        else:
+            self.logger.info("Authentication is already set.")
+
+        # Define embedding model
+        _, _ = self.define_embedding_model()
 
         # Prepare content
-        return_success, log_msg, vector_store_loaded_client = self.prepare_content_in_vector_store()
-        if return_success < 0:
-            return return_success, log_msg
+        if not self.check_if_vector_store_index_already_exists_for_this_url(url_to_ask):
+            self.logger.info("Once the URL-based index was not found, preparing the vector store for a new content")
+            self.url = url_to_ask
+            (
+                return_success,
+                log_msg,
+                self.vector_store_loaded_client,
+            ) = self.prepare_content_in_vector_store()
+            if return_success < 0:
+                return return_success, log_msg
+        else:
+            self.logger.info(
+                "Vector store already fulfilled with this URL content. Setting client to respective index..."
+            )
+            if not self.url:
+                self.url = url_to_ask
+            self.vector_store_loaded_client = self.utils.set_vector_store_client_to_specific_index(self.url, self.embedding_model)
 
         # Prepare LLM chain
-        self.prepare_LLM_chain(vector_store_loaded_client)
+        if not self._chain_is_prepared or model_to_ask != self.model_choice:
+            self.model_choice = model_to_ask
+            self.prepare_LLM_chain(self.vector_store_loaded_client)
+        else:
+            self.logger.info("Chain is already set. Reusing it.")
 
         # Ask question about the content
+        self.question = question_to_ask
         _, answer = self.ask_question_to_llm(self.model_choice)
         return 1, answer
 
     def prepare_content_in_vector_store(self):
         """ Get content, apply embedding and save vectors in a vector store """
 
+        self.logger.info("Preparing vector store...")
         # Get text content
         text_content, log_msg = self.get_content(mode="text_no_parse")
         if not text_content:
@@ -192,18 +239,12 @@ class ControllerLlm:
 
         _, log_msg = self.describe_chunks(text_content)
 
-        # Define embedding model
-        embedding_model, log_msg = self.define_embedding_model()
-
         # Create/reset vector store index
         _, log_msg = self.create_vector_store_index()
 
         # Upload vectors to vector store
-        (
-            vector_store_loaded_client,
-            log_msg,
-        ) = self.upload_vectors_to_vector_store(
-            text_content, embedding_model
+        (vector_store_loaded_client, log_msg,) = self.upload_vectors_to_vector_store(
+            text_content, self.embedding_model
         )
 
         # Wait some time, to have vectorstore available
@@ -212,12 +253,14 @@ class ControllerLlm:
         )
 
         # Check if the new index exists
-        result_success, log_msg = self.check_if_vector_store_index_exists()
+        result_success = self.check_if_vector_store_index_already_exists_for_this_url(self.url)
         if not result_success:
             return -2, "Namespace does not exist in vector store", None
 
         # Check availability of the vectorestore
         # ToDo
+
+        self.logger.info("Preparing vector store...DONE.")
         return 1, log_msg, vector_store_loaded_client
 
     def split_documents_into_chunks(
@@ -254,6 +297,7 @@ class ControllerLlm:
             )  # Auth Pinecone
             log_msg = "Succeed authenticating."
             self.logger.info(log_msg)
+            self._is_authenticated = True
             return True, log_msg
         except Exception as e:
             raise e
@@ -261,7 +305,10 @@ class ControllerLlm:
     def ask_question_to_llm(self, llm_model_choice):
         """ Ask a question to a LLM model """
 
-        answer, log_msg = self._utils.asking_question_about_content_using_retrieved_documents_chain(
+        (
+            answer,
+            log_msg,
+        ) = self._utils.asking_question_about_content_using_retrieved_documents_chain(
             self._chain, self._question
         )
         self.logger.info(f"Question asked to {llm_model_choice}")
@@ -303,13 +350,18 @@ class ControllerLlm:
         """ Define the embedding model to be used to transform the content in vectors """
 
         embedding_model, log_msg = self._utils.define_embedding_model_google()
+        self.embedding_model = embedding_model
+        self.logger.debug(f"Embedding model defined: {self.embedding_model}")
         return embedding_model, log_msg
 
     def create_vector_store_index(self):
         """ Create a namespace in a vector database """
 
+        # Prepare index name
+        hashed_index_name = self._utils.apply_hash_md5(self.url)
+
         _, log_msg = self._utils.create_pinecone_index(
-            self._vector_store_client, general_parameters.par__vector_store_index_name
+            self._vector_store_client, hashed_index_name
         )
         return None, log_msg
 
@@ -317,17 +369,20 @@ class ControllerLlm:
         """ Upload vectors of the content embedded to a vector database """
 
         vectorstore_loaded, log_msg = self._utils.upload_vectors_to_pinecone(
-            general_parameters.par__vector_store_index_name, chunks, embedding_model,
+            self.utils.apply_hash_md5(self.url), chunks, embedding_model,
         )
         return vectorstore_loaded, log_msg
 
-    def check_if_vector_store_index_exists(self):
-        """ Check if a namespace exists in a vector database """
+    def check_if_vector_store_index_already_exists_for_this_url(self, url_to_check):
+        """ Check if the specific URL-based namespace already exists in a vector store """
 
-        result_success, log_msg = self._utils.check_if_pinecone_index_exists(
-            self._vector_store_client, general_parameters.par__vector_store_index_name
+        url_to_check_hashed = self.utils.apply_hash_md5(url_to_check)
+        self.logger.debug(f"Checking URL {url_to_check} hashed to {url_to_check_hashed}")
+        result_success = self._utils.check_if_a_specific_index_exists_in_pinecone(
+            self._vector_store_client, url_to_check_hashed
         )
-        return result_success, log_msg
+        self.logger.info(f"Does a vector store index already exist for this URL: {result_success}")
+        return result_success
 
     def define_llm_model(self, llm_model_choice):
         """ Define a llm model to be asked """
@@ -365,9 +420,6 @@ class ControllerLlm:
         prompt, log_msg = self.prepare_prompt()
 
         # Build chain
-        _, log_msg = self.build_chain(
-            vector_store_loaded_client,
-            llm_model,
-            prompt
-        )
+        _, log_msg = self.build_chain(vector_store_loaded_client, llm_model, prompt)
+        self._chain_is_prepared = True
         pass

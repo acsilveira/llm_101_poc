@@ -1,5 +1,5 @@
 import streamlit as st
-import controller_llm as controller_llm
+import controller as controller_llm
 import utils as toolkit
 import parameters as general_parameters
 
@@ -19,7 +19,7 @@ def main():
     if "question_text" not in st.session_state:
         st.session_state.question_text = False
     if "ctl_llm" not in st.session_state:
-        st.session_state.ctl_llm = controller_llm.ControllerLlm("", "")
+        st.session_state.ctl_llm = controller_llm.Controller("", "")
     if "question_again_text" not in st.session_state:
         st.session_state.question_again_text = ""
     if "llm_model_choice" not in st.session_state:
@@ -39,12 +39,19 @@ def main():
             key="element_llm_model_choice",
         )
 
-        st.subheader("Article URL")
-        st.write("What article do you want ask about?")
-        url_to_ask = st.text_input("URL:")
-        if url_to_ask:
-            st.session_state.url_to_ask = url_to_ask
-            set_state(1)
+        placeholder_url = st.empty()
+        with placeholder_url.container():
+            st.subheader("Article URL")
+            st.write("What article do you want ask about?")
+            with st.form("form_content_url", border=False, clear_on_submit=True):
+                url_to_ask = st.text_input("URL:")
+                submitted = st.form_submit_button("Submit")
+                if submitted:
+                    if not url_to_ask:
+                        url_to_ask = general_parameters.par__default_url_content_to_test
+                    st.session_state.url_to_ask = url_to_ask
+                    placeholder_url.empty()
+                    set_state(1)
 
         # --- PDF upload
         # st.subheader("PDF file")
@@ -104,9 +111,9 @@ def main():
     # Calls LLM and shows answer
     if st.session_state.stage == 3:
         # Using Controller LLM
-        st.session_state.ctl_llm.url = st.session_state.url_to_ask
-        st.session_state.ctl_llm.question = st.session_state.question_text
-        st.session_state.ctl_llm.model_choice = st.session_state.llm_model_choice
+        # st.session_state.ctl_llm.url = st.session_state.url_to_ask
+        # st.session_state.ctl_llm.question = st.session_state.question_text
+        # st.session_state.ctl_llm.model_choice = st.session_state.llm_model_choice
 
         placeholder_log = st.empty()
         with placeholder_log.container():
@@ -120,7 +127,7 @@ def main():
             )
             st.markdown(f"```Starting...```")
 
-            result_success, answer = st.session_state.ctl_llm.ask_to_llm()
+            result_success, answer = st.session_state.ctl_llm.ask_to_llm(st.session_state.url_to_ask, st.session_state.question_text, st.session_state.llm_model_choice)
 
             if result_success == -1:
                 st.markdown(
