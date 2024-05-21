@@ -16,3 +16,4 @@ par__waiting_time_in_seconds_in_error_case = 10
 par__chunk_size = 1000
 par__chunk_overlap = 200
 par__default_llm_model_choice = "Gemini"
+par__default_url_content_to_test = "https://staffeng.com/guides/staff-archetypes/"
