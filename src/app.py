@@ -29,7 +29,9 @@ def main():
 
     st.title("LLM very simple app")
 
-    # Get content source
+    # --------------------------------------------------
+    # Screen: Get content source
+    # --------------------------------------------------
     if st.session_state.stage < 1:
 
         st.selectbox(
@@ -84,7 +86,9 @@ def main():
         #         st.write("Please, upload a PDF file first.")
         # ---
 
-    # Get question to be asked
+    # --------------------------------------------------
+    # Screen: Get question to be asked
+    # --------------------------------------------------
     if st.session_state.stage == 1:
         placeholder_question_first = st.empty()
         with placeholder_question_first.container():
@@ -98,7 +102,9 @@ def main():
                     placeholder_question_first.empty()
                     set_state(2)
 
-    # Confirm source and question
+    # --------------------------------------------------
+    # Screen: Confirm source and question
+    # --------------------------------------------------
     if st.session_state.stage == 2:
         placeholder_confirmation = st.empty()
         with placeholder_confirmation.container():
@@ -108,13 +114,10 @@ def main():
             )
             st.button("Ask to LLM", on_click=set_state, args=[3])
 
-    # Calls LLM and shows answer
+    # --------------------------------------------------
+    # Screen: Calls LLM and shows answer
+    # --------------------------------------------------
     if st.session_state.stage == 3:
-        # Using Controller LLM
-        # st.session_state.ctl_llm.url = st.session_state.url_to_ask
-        # st.session_state.ctl_llm.question = st.session_state.question_text
-        # st.session_state.ctl_llm.model_choice = st.session_state.llm_model_choice
-
         placeholder_log = st.empty()
         with placeholder_log.container():
             st.write("Warming up LLM and then asking...")
@@ -127,7 +130,13 @@ def main():
             )
             st.markdown(f"```Starting...```")
 
-            result_success, answer = st.session_state.ctl_llm.ask_to_llm(st.session_state.url_to_ask, st.session_state.question_text, st.session_state.llm_model_choice)
+            # ToDo: Show logs to the user
+
+            result_success, answer = st.session_state.ctl_llm.ask_to_llm(
+                st.session_state.url_to_ask,
+                st.session_state.question_text,
+                st.session_state.llm_model_choice,
+            )
 
             if result_success == -1:
                 st.markdown(
@@ -162,7 +171,9 @@ def main():
             st.divider()
         st.button("Ask again", on_click=set_state, args=[4])
 
-    # Get question for a new ask
+    # --------------------------------------------------
+    # Screen: Get question for a new ask
+    # --------------------------------------------------
     if st.session_state.stage == 4:
         placeholder = st.empty()
         with placeholder.container():
@@ -176,7 +187,9 @@ def main():
                     placeholder.empty()
                     set_state(5)
 
-    # Calls LLM and shows answer for a new ask
+    # --------------------------------------------------
+    # Screen: Calls LLM and shows answer for the new ask
+    # --------------------------------------------------
     if st.session_state.stage == 5:
         st.session_state.ctl_llm.question = st.session_state.question_text
         placeholder_running_again = st.empty()
