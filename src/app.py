@@ -3,6 +3,17 @@ import controller as controller_llm
 import utils as toolkit
 import parameters as general_parameters
 import pdfplumber
+import logging
+from custom_log_handler import StreamlitLogHandler
+
+
+def setup_logging():
+    root_logger = logging.getLogger()  # Get the root logger
+    log_container = st.container()  # Create a container within which we display logs
+    handler = StreamlitLogHandler(log_container)
+    handler.setLevel(logging.INFO)
+    root_logger.addHandler(handler)
+    return handler
 
 
 def main():
@@ -16,6 +27,9 @@ def main():
         st.session_state.source_type_choice = st.session_state[
             "element_source_type_choice"
         ]
+
+    def set_text_handling_choice():
+        st.session_state.text_handling_choice = st.session_state["element_text_handling_choice"]
 
     # Control UI stages
     if "stage" not in st.session_state:
@@ -34,6 +48,10 @@ def main():
         st.session_state.llm_model_choice = (
             general_parameters.par__default_llm_model_choice
         )
+    if "text_handling_choice" not in st.session_state:
+        st.session_state.text_handling_choice = (
+            general_parameters.par__default_text_handling_choice
+        )
     if "source_type_choice" not in st.session_state:
         st.session_state.source_type_choice = (
             general_parameters.par__default_source_type_choice
@@ -41,26 +59,35 @@ def main():
 
     st.title("LLM very simple app")
 
+    placeholder_choice = st.empty()
+    with placeholder_choice.container():
+        if st.session_state.stage not in general_parameters.par__stages_when_choices_are_disabled:
+            st.radio(
+                "LLM being used",
+                ["Gemini", "chatGPT"],
+                on_change=set_llm_model_choice,
+                key="element_llm_model_choice",
+            )
+            st.radio(
+                "Source type",
+                ["URL", "PDF"],
+                on_change=set_source_type_choice,
+                key="element_source_type_choice",
+            )
+            st.radio(
+                "Content handling",
+                ["Filter relevant parts", "All text"],
+                on_change=set_text_handling_choice,
+                key="element_text_handling_choice",
+            )
+
+    placeholder_general = st.empty()
     # --------------------------------------------------
     # Screen: Get content source
     # --------------------------------------------------
     if st.session_state.stage < 1:
-
-        st.selectbox(
-            "LLM being used",
-            ("Gemini", "chatGPT"),
-            on_change=set_llm_model_choice,
-            key="element_llm_model_choice",
-        )
-        st.radio(
-            "Source type",
-            ["URL", "PDF"],
-            on_change=set_source_type_choice,
-            key="element_source_type_choice",
-        )
-
-        placeholder_url = st.empty()
-        with placeholder_url.container():
+        # placeholder_url = st.empty()
+        with placeholder_general.container():
             if st.session_state.source_type_choice == "URL":
                 st.subheader("Article URL")
                 st.write("What article do you want ask about?")
@@ -73,7 +100,7 @@ def main():
                                 general_parameters.par__default_url_content_to_test
                             )
                         st.session_state.content_ref_to_ask = url_to_ask
-                        placeholder_url.empty()
+                        placeholder_general.empty()
                         set_state(1)
             elif st.session_state.source_type_choice == "PDF":
                 st.subheader("PDF file")
@@ -108,8 +135,9 @@ def main():
     # Screen: Get question to be asked
     # --------------------------------------------------
     if st.session_state.stage == 1:
-        placeholder_question_first = st.empty()
-        with placeholder_question_first.container():
+        # placeholder_question_first = st.empty()
+        placeholder_general.empty()
+        with placeholder_general.container():
             st.subheader("Question")
             st.write("What do you want to know about the content in the web article?")
             with st.form("form_question_first", border=False, clear_on_submit=True):
@@ -117,15 +145,19 @@ def main():
                 submitted = st.form_submit_button("Submit")
                 if submitted:
                     st.session_state.question_text = text_question
-                    placeholder_question_first.empty()
+                    # placeholder_question_first.empty()
                     set_state(2)
+            st.button("Star over", on_click=set_state, args=[0])
 
     # --------------------------------------------------
     # Screen: Confirm source and question
     # --------------------------------------------------
     if st.session_state.stage == 2:
-        placeholder_confirmation = st.empty()
-        with placeholder_confirmation.container():
+        # if "placeholder_question_first" in st.session_state:
+        #     placeholder_question_first.empty()
+        # placeholder_confirmation = st.empty()
+        placeholder_general.empty()
+        with placeholder_general.container():
             st.markdown(
                 f"You would ask **{st.session_state.question_text}** about the article in "
                 f"```{st.session_state.content_ref_to_ask}```. "
@@ -136,19 +168,11 @@ def main():
     # Screen: Calls LLM and shows answer
     # --------------------------------------------------
     if st.session_state.stage == 3:
+        handler = setup_logging()
+        placeholder_choice.empty()
         placeholder_log = st.empty()
         with placeholder_log.container():
             st.write("Warming up LLM and then asking...")
-            _ = st.session_state.ctl_llm.main()
-
-            st.markdown(
-                f"```It will take some time because first we need to warm up the LLM and their friends."
-                f" If you are curious I can show you each step happening. But I will be quick so chop-chop."
-                f" Enjoy the ride...```"
-            )
-            st.markdown(f"```Starting...```")
-
-            # ToDo: Show logs to the user
 
             result_success, answer = st.session_state.ctl_llm.ask_to_llm(
                 st.session_state.content_ref_to_ask,
@@ -193,6 +217,7 @@ def main():
             st.write(answer)
             st.divider()
         st.button("Ask again", on_click=set_state, args=[4])
+        st.button("Star over", on_click=set_state, args=[0])
 
     # --------------------------------------------------
     # Screen: Get question for a new ask
@@ -208,12 +233,14 @@ def main():
                 if submitted:
                     st.session_state.question_text = text_question
                     placeholder.empty()
+                    placeholder_choice.empty()
                     set_state(5)
 
     # --------------------------------------------------
     # Screen: Calls LLM and shows answer for the new ask
     # --------------------------------------------------
     if st.session_state.stage == 5:
+        handler = setup_logging()
         st.session_state.ctl_llm.question = st.session_state.question_text
         placeholder_running_again = st.empty()
         with placeholder_running_again.container():
@@ -229,6 +256,7 @@ def main():
             st.write(answer)
             st.divider()
         st.button("Ask again", on_click=set_state, args=[4])
+        st.button("Star over", on_click=set_state, args=[0])
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import logging.config
 import os
 
+
 abs_path_for_log_file = os.path.abspath("app.log")
 
 LOGGING_CONFIG = {
@@ -39,3 +40,4 @@ LOGGING_CONFIG = {
 
 logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger()
+
