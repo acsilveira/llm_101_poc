@@ -11,6 +11,7 @@ class Controller:
     def __init__(self, content_ref, question):
         self._content_ref = content_ref
         self._pdf_file_ref = None
+        self._content_type = None
         self._question = question
         self._model_choice = None
         self._utils = toolkit.UtilsLLM()
@@ -32,6 +33,10 @@ class Controller:
     @property
     def pdf_file_ref(self):
         return self._pdf_file_ref
+
+    @property
+    def content_type(self):
+        return self._content_type
 
     @property
     def question(self):
@@ -69,6 +74,10 @@ class Controller:
     def embedding_model(self):
         return self._embedding_model
 
+    @property
+    def chain_is_prepared(self):
+        return self._chain_is_prepared
+
     @content_ref.setter
     def content_ref(self, value):
         self._content_ref = value
@@ -76,6 +85,10 @@ class Controller:
     @pdf_file_ref.setter
     def pdf_file_ref(self, value):
         self._pdf_file_ref = value
+
+    @content_type.setter
+    def content_type(self, value):
+        self._content_type = value
 
     @question.setter
     def question(self, value):
@@ -113,6 +126,10 @@ class Controller:
     def embedding_model(self, value):
         self._embedding_model = value
 
+    @chain_is_prepared.setter
+    def chain_is_prepared(self, value):
+        self._chain_is_prepared = value
+
     def ask_to_llm(
         self,
         content_to_ask,
@@ -138,6 +155,9 @@ class Controller:
 
         # Define embedding model
         _, _ = self.define_embedding_model()
+
+        # Register the content type chosen
+        self.content_type = content_type_to_ask
 
         # Prepare content
         if not self.check_if_vector_store_index_already_exists_for_this_url(
@@ -167,7 +187,7 @@ class Controller:
 
         # Ask question about the content
         self.question = question_to_ask
-        _, answer = self.ask_question_to_llm(model_to_ask)
+        _, answer = self.ask_question_to_llm(model_to_ask, content_type_to_ask)
         return 1, answer
 
     def authenticate(self):
@@ -244,14 +264,25 @@ class Controller:
         self.logger.info("Preparing vector store...DONE.")
         return 1, log_msg, vector_store_loaded_client
 
-    def ask_question_to_llm(self, llm_model_choice):
+    def ask_question_to_llm(self, llm_model_choice, content_type_to_ask):
         """ Ask a question to a LLM model """
 
         # Prepare LLM chain
-        if not self._chain_is_prepared or self.model_choice != llm_model_choice:
+        self.logger.debug(f"Flag chain prepared set as {self._chain_is_prepared}")
+        self.logger.debug(
+            f"Model choice previously set as {self.model_choice} and passed as {llm_model_choice}"
+        )
+        self.logger.debug(
+            f"Content type choice previously set as {self.content_type} and passed as {content_type_to_ask}"
+        )
+        if (
+            not self._chain_is_prepared
+            or self.model_choice != llm_model_choice
+            or self.content_type != content_type_to_ask
+        ):
             self.model_choice = llm_model_choice
             self.prepare_llm_chain(self.vector_store_loaded_client)
-            self.logger.info(f"Succeed reseting chain for model: {llm_model_choice}.")
+            self.logger.info(f"Succeed resetting chain for model: {llm_model_choice}.")
         else:
             self.logger.info("Chain is already set. Reusing it.")
 
