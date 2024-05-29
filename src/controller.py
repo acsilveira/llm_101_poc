@@ -123,6 +123,13 @@ class Controller:
     ):
         """ Ask a question about a content to a LLM model """
 
+        self.logger.info(
+            "\nIt will take some time because first we need to warm up the LLM and their friends."
+            "\nIf you are curious I can show you each step happening. But I will be quick so chop-chop."
+            "\nEnjoy the ride."
+            "\nStarting..."
+        )
+
         # Authenticate
         if not self._is_authenticated:
             _, log_msg = self.authenticate()
@@ -258,7 +265,6 @@ class Controller:
         self.logger.info(f"Question asked to {llm_model_choice}")
         self.logger.info(f"Q: {self._question}")
         self.logger.info("A: " + answer["answer"])
-        self.logger.info(answer)
         return True, answer
 
     def get_content(self, mode):
