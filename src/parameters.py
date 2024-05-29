@@ -18,3 +18,6 @@ par__chunk_overlap = 200
 par__default_llm_model_choice = "Gemini"
 par__default_source_type_choice = "URL"
 par__default_url_content_to_test = "https://staffeng.com/guides/staff-archetypes/"
+par__default_text_handling_choice = "Filter relevant parts"
+par__stages_when_choices_are_disabled = [3, 5]
+par__log_textarea_UI_key = "log_textarea"
