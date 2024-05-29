@@ -49,10 +49,12 @@ LLM 101 PoC, ToDo
 [DONE]      Create another choice for "all text" and "text filtered by relevance"
 [DONE]      Show the choices for specific the screens
 [DONE]  Allow UI change the model choice for further questions
-        Allow question inputting all(limited) content
-*       Find a way to show logging in the UI
+*       Allow question inputting all(limited) content
+[DONE]  Find a way to show logging in the UI
 [DONE]      Re-implement logging to show to the user each step happening: https://discuss.streamlit.io/t/redirecting-logger-output-to-a-streamlit-widget/61070/2
-            Solve the error message popup "Bad 'setIn'"
+[DONE]      Solve the error message popup "Bad 'setIn'"
+[DONE]      Show option choice for content type PDF|URL only in the appropriated states
+[DONE]      If the option choice for content type PDF|URL changed then the chain should be rebuilt
         ---v0.2
         Tech debt
 [wip]       Reorg code as best practice

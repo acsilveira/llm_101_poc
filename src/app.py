@@ -7,9 +7,8 @@ import logging
 from custom_log_handler import StreamlitLogHandler
 
 
-def setup_logging():
+def setup_logging(log_container):
     root_logger = logging.getLogger()  # Get the root logger
-    log_container = st.container()  # Create a container within which we display logs
     handler = StreamlitLogHandler(log_container)
     handler.setLevel(logging.INFO)
     root_logger.addHandler(handler)
@@ -20,6 +19,22 @@ def main():
     def set_state(i):
         st.session_state.stage = i
 
+    def set_content_type_choice_visibility(par_value):
+        st.session_state["show_content_type_choice"] = par_value
+
+    def set_state_and_content_type_choice_visibility(
+        par_state_value, par_value_show_content_type_choice
+    ):
+        set_state(par_state_value)
+        set_content_type_choice_visibility(par_value_show_content_type_choice)
+
+    def set_state_and_content_type_choice_visibility_and_rerun(
+        par_state_value, par_value_show_content_type_choice
+    ):
+        set_state(par_state_value)
+        set_content_type_choice_visibility(par_value_show_content_type_choice)
+        st.rerun()
+
     def set_llm_model_choice():
         st.session_state.llm_model_choice = st.session_state["element_llm_model_choice"]
 
@@ -29,7 +44,13 @@ def main():
         ]
 
     def set_text_handling_choice():
-        st.session_state.text_handling_choice = st.session_state["element_text_handling_choice"]
+        st.session_state.text_handling_choice = st.session_state[
+            "element_text_handling_choice"
+        ]
+
+    def reset_controller():
+        """ Reset controller to avoid past questions interfering in the next question """
+        st.session_state.ctl_llm.chain_is_prepared = False
 
     # Control UI stages
     if "stage" not in st.session_state:
@@ -56,24 +77,33 @@ def main():
         st.session_state.source_type_choice = (
             general_parameters.par__default_source_type_choice
         )
+    if "show_content_type_choice" not in st.session_state:
+        st.session_state["show_content_type_choice"] = True
 
     st.title("LLM very simple app")
+    st.write(
+        f"show_content_type_choice: {st.session_state['show_content_type_choice']}"
+    )
 
     placeholder_choice = st.empty()
     with placeholder_choice.container():
-        if st.session_state.stage not in general_parameters.par__stages_when_choices_are_disabled:
+        if (
+            st.session_state.stage
+            not in general_parameters.par__stages_when_choices_are_disabled
+        ):
             st.radio(
                 "LLM being used",
-                ["Gemini", "chatGPT"],
+                ["Gemini", "GPT 3.5"],
                 on_change=set_llm_model_choice,
                 key="element_llm_model_choice",
             )
-            st.radio(
-                "Source type",
-                ["URL", "PDF"],
-                on_change=set_source_type_choice,
-                key="element_source_type_choice",
-            )
+            if st.session_state["show_content_type_choice"]:
+                st.radio(
+                    "Source type",
+                    ["URL", "PDF"],
+                    on_change=set_source_type_choice,
+                    key="element_source_type_choice",
+                )
             st.radio(
                 "Content handling",
                 ["Filter relevant parts", "All text"],
@@ -81,13 +111,22 @@ def main():
                 key="element_text_handling_choice",
             )
 
-    placeholder_general = st.empty()
+    # Set placeholders for UI elements
+    placeholder_input_content = st.empty()
+    placeholder_input_question = st.empty()
+    placeholder_input_confirm = st.empty()
+    placeholder_log = st.empty()
+    placeholder_calling_llm = st.empty()
+    placeholder_input_new_question = st.empty()
+    placeholder_running_again = st.empty()
+
     # --------------------------------------------------
     # Screen: Get content source
     # --------------------------------------------------
     if st.session_state.stage < 1:
-        # placeholder_url = st.empty()
-        with placeholder_general.container():
+        reset_controller()
+        st.session_state["show_content_type_choice"] = True
+        with placeholder_input_content.container():
             if st.session_state.source_type_choice == "URL":
                 st.subheader("Article URL")
                 st.write("What article do you want ask about?")
@@ -100,8 +139,8 @@ def main():
                                 general_parameters.par__default_url_content_to_test
                             )
                         st.session_state.content_ref_to_ask = url_to_ask
-                        placeholder_general.empty()
-                        set_state(1)
+                        placeholder_input_content.empty()
+                        set_state_and_content_type_choice_visibility_and_rerun(1, False)
             elif st.session_state.source_type_choice == "PDF":
                 st.subheader("PDF file")
                 st.write("Upload a PDF file to ask about:")
@@ -125,7 +164,7 @@ def main():
                         except Exception as e:
                             st.write(">>Error loading pdf file.")
                             raise e
-                        set_state(1)
+                        set_state_and_content_type_choice_visibility_and_rerun(1, False)
                     else:
                         st.write("Please, upload a PDF file first.")
             else:
@@ -135,9 +174,7 @@ def main():
     # Screen: Get question to be asked
     # --------------------------------------------------
     if st.session_state.stage == 1:
-        # placeholder_question_first = st.empty()
-        placeholder_general.empty()
-        with placeholder_general.container():
+        with placeholder_input_question.container():
             st.subheader("Question")
             st.write("What do you want to know about the content in the web article?")
             with st.form("form_question_first", border=False, clear_on_submit=True):
@@ -145,19 +182,19 @@ def main():
                 submitted = st.form_submit_button("Submit")
                 if submitted:
                     st.session_state.question_text = text_question
-                    # placeholder_question_first.empty()
-                    set_state(2)
-            st.button("Star over", on_click=set_state, args=[0])
+                    set_state_and_content_type_choice_visibility_and_rerun(2, False)
+            st.button(
+                "Star over",
+                on_click=set_state_and_content_type_choice_visibility,
+                args=[0, True],
+            )
 
     # --------------------------------------------------
     # Screen: Confirm source and question
     # --------------------------------------------------
     if st.session_state.stage == 2:
-        # if "placeholder_question_first" in st.session_state:
-        #     placeholder_question_first.empty()
-        # placeholder_confirmation = st.empty()
-        placeholder_general.empty()
-        with placeholder_general.container():
+        placeholder_input_question.empty()
+        with placeholder_input_confirm.container():
             st.markdown(
                 f"You would ask **{st.session_state.question_text}** about the article in "
                 f"```{st.session_state.content_ref_to_ask}```. "
@@ -168,12 +205,9 @@ def main():
     # Screen: Calls LLM and shows answer
     # --------------------------------------------------
     if st.session_state.stage == 3:
-        handler = setup_logging()
+        setup_logging(placeholder_log)
         placeholder_choice.empty()
-        placeholder_log = st.empty()
-        with placeholder_log.container():
-            st.write("Warming up LLM and then asking...")
-
+        with placeholder_calling_llm.container():
             result_success, answer = st.session_state.ctl_llm.ask_to_llm(
                 st.session_state.content_ref_to_ask,
                 st.session_state.question_text,
@@ -207,24 +241,30 @@ def main():
                 st.markdown(":red[Unknown content type.] Sorry. This is not expected.")
                 raise Exception("Unknown content type to get content from.")
 
-            st.markdown("Success asking question to the LLM model.")
-            placeholder_log.empty()
-
         # Present answer
         st.write(answer["answer"])
         with st.expander("See details"):
             st.subheader("Details")
             st.write(answer)
             st.divider()
-        st.button("Ask again", on_click=set_state, args=[4])
-        st.button("Star over", on_click=set_state, args=[0])
+        st.button(
+            "Ask again",
+            on_click=set_state_and_content_type_choice_visibility,
+            args=[4, False],
+        )
+        st.button(
+            "Start over",
+            on_click=set_state_and_content_type_choice_visibility,
+            args=[0, True],
+        )
 
     # --------------------------------------------------
     # Screen: Get question for a new ask
     # --------------------------------------------------
     if st.session_state.stage == 4:
-        placeholder = st.empty()
-        with placeholder.container():
+        placeholder_log.empty()
+        placeholder_calling_llm.empty()
+        with placeholder_input_new_question.container():
             st.subheader("Question")
             st.write("What more do you want to know about the article?")
             with st.form("form_question_again", border=False, clear_on_submit=True):
@@ -232,7 +272,6 @@ def main():
                 submitted = st.form_submit_button("Submit")
                 if submitted:
                     st.session_state.question_text = text_question
-                    placeholder.empty()
                     placeholder_choice.empty()
                     set_state(5)
 
@@ -240,13 +279,12 @@ def main():
     # Screen: Calls LLM and shows answer for the new ask
     # --------------------------------------------------
     if st.session_state.stage == 5:
-        handler = setup_logging()
+        placeholder_input_new_question.empty()
+        setup_logging(placeholder_log)
         st.session_state.ctl_llm.question = st.session_state.question_text
-        placeholder_running_again = st.empty()
         with placeholder_running_again.container():
-            st.markdown("```Asking with LLM warmed... now is faster.```")
             _, answer = st.session_state.ctl_llm.ask_question_to_llm(
-                st.session_state.llm_model_choice
+                st.session_state.llm_model_choice, st.session_state.source_type_choice,
             )
         placeholder_running_again.empty()
 
@@ -256,7 +294,15 @@ def main():
             st.write(answer)
             st.divider()
         st.button("Ask again", on_click=set_state, args=[4])
-        st.button("Star over", on_click=set_state, args=[0])
+        st.button(
+            "Start over",
+            on_click=set_state_and_content_type_choice_visibility,
+            args=[0, True],
+        )
+
+    st.write(
+        f"show_content_type_choice: {st.session_state['show_content_type_choice']}"
+    )
 
 
 if __name__ == "__main__":
