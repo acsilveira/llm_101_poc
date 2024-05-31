@@ -81,9 +81,6 @@ def main():
         st.session_state["show_content_type_choice"] = True
 
     st.title("LLM very simple app")
-    st.write(
-        f"show_content_type_choice: {st.session_state['show_content_type_choice']}"
-    )
 
     placeholder_choice = st.empty()
     with placeholder_choice.container():
@@ -91,24 +88,37 @@ def main():
             st.session_state.stage
             not in general_parameters.par__stages_when_choices_are_disabled
         ):
+            options_model_choice = ["Gemini", "chatGPT"]
             st.radio(
                 "LLM being used",
-                ["Gemini", "GPT 3.5"],
+                options_model_choice,
                 on_change=set_llm_model_choice,
                 key="element_llm_model_choice",
+                index=options_model_choice.index(st.session_state.llm_model_choice),
             )
             if st.session_state["show_content_type_choice"]:
+                options_content_type = ["URL", "PDF"]
                 st.radio(
                     "Source type",
-                    ["URL", "PDF"],
+                    options_content_type,
                     on_change=set_source_type_choice,
                     key="element_source_type_choice",
+                    index=options_content_type.index(
+                        st.session_state.source_type_choice
+                    ),
                 )
+            options_content_handling = [
+                general_parameters.par__default_text_handling_choice,
+                general_parameters.par__label_content_handling_all_text,
+            ]
             st.radio(
                 "Content handling",
-                ["Filter relevant parts", "All text"],
+                options_content_handling,
                 on_change=set_text_handling_choice,
                 key="element_text_handling_choice",
+                index=options_content_handling.index(
+                    st.session_state.text_handling_choice
+                ),
             )
 
     # Set placeholders for UI elements
@@ -202,7 +212,7 @@ def main():
             st.button("Ask to LLM", on_click=set_state, args=[3])
 
     # --------------------------------------------------
-    # Screen: Calls LLM and shows answer
+    # Screen: Prepare content, call LLM and show answer
     # --------------------------------------------------
     if st.session_state.stage == 3:
         setup_logging(placeholder_log)
@@ -214,6 +224,7 @@ def main():
                 st.session_state.llm_model_choice,
                 st.session_state.source_type_choice,
                 st.session_state.pdf_file_ref,
+                st.session_state.text_handling_choice,
             )
 
             if result_success == -1:
@@ -242,11 +253,20 @@ def main():
                 raise Exception("Unknown content type to get content from.")
 
         # Present answer
-        st.write(answer["answer"])
-        with st.expander("See details"):
-            st.subheader("Details")
+        if (
+            st.session_state.text_handling_choice
+            == general_parameters.par__label_content_handling_all_text
+        ):
             st.write(answer)
-            st.divider()
+        elif (
+            st.session_state.text_handling_choice
+            == general_parameters.par__label_content_handling_retrieved_documents
+        ):
+            st.write(answer["answer"])
+            with st.expander("See details"):
+                st.subheader("Details")
+                st.write(answer)
+                st.divider()
         st.button(
             "Ask again",
             on_click=set_state_and_content_type_choice_visibility,
@@ -282,27 +302,57 @@ def main():
         placeholder_input_new_question.empty()
         setup_logging(placeholder_log)
         st.session_state.ctl_llm.question = st.session_state.question_text
+        st.session_state.ctl_llm.content_handling_choice = (
+            st.session_state.text_handling_choice
+        )
         with placeholder_running_again.container():
-            _, answer = st.session_state.ctl_llm.ask_question_to_llm(
-                st.session_state.llm_model_choice, st.session_state.source_type_choice,
-            )
+            if (
+                st.session_state.text_handling_choice
+                == general_parameters.par__label_content_handling_retrieved_documents
+            ):
+                (
+                    _,
+                    answer,
+                ) = st.session_state.ctl_llm.ask_question_to_llm_using_vector_store(
+                    st.session_state.llm_model_choice,
+                    st.session_state.source_type_choice,
+                )
+            elif (
+                st.session_state.text_handling_choice
+                == general_parameters.par__label_content_handling_all_text
+            ):
+                (
+                    _,
+                    answer,
+                ) = st.session_state.ctl_llm.ask_question_to_llm_passing_limited_text(
+                    st.session_state.llm_model_choice,
+                    st.session_state.source_type_choice,
+                )
+            else:
+                raise Exception("Unknown text handling type.")
         placeholder_running_again.empty()
 
-        st.write(answer["answer"])
-        with st.expander("See details"):
-            st.subheader("Details")
+        # Present answer
+        if (
+            st.session_state.text_handling_choice
+            == general_parameters.par__label_content_handling_all_text
+        ):
             st.write(answer)
-            st.divider()
+        elif (
+            st.session_state.text_handling_choice
+            == general_parameters.par__label_content_handling_retrieved_documents
+        ):
+            st.write(answer["answer"])
+            with st.expander("See details"):
+                st.subheader("Details")
+                st.write(answer)
+                st.divider()
         st.button("Ask again", on_click=set_state, args=[4])
         st.button(
             "Start over",
             on_click=set_state_and_content_type_choice_visibility,
             args=[0, True],
         )
-
-    st.write(
-        f"show_content_type_choice: {st.session_state['show_content_type_choice']}"
-    )
 
 
 if __name__ == "__main__":
