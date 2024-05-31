@@ -256,7 +256,7 @@ class UtilsLLM:
 
         try:
             prompt = PromptTemplate(
-                template=general_parameters.par__prompt_template,
+                template=general_parameters.par__prompt_template_generic_chain,
                 input_variables=[
                     general_parameters.par__prompt_template_var_context,
                     general_parameters.par__prompt_template_var_input,
@@ -281,21 +281,20 @@ class UtilsLLM:
             retrieval_chain = create_retrieval_chain(retriever, combine_docs_chain)
         except Exception as e:
             raise e
-        log_msg = "Succeed building chain"
+        log_msg = "Succeed building chain with documents retrieval"
         self.logger.info(log_msg)
         return retrieval_chain, log_msg
 
-    def build_chain_wo_retriver(self, llm_model, prompt, input_question):
-        print(par__prompt_template_var_context + "=" + input_context[:500])
+    def build_all_documents_chain(self, llm_model, prompt):
+        """ Build a chain that passes all documents to the LLM as context """
+
         try:
-            result = llm_model.invoke(
-                prompt.format(par__prompt_template_var_input=input_question)
-            )
+            all_docs_chain = create_stuff_documents_chain(llm_model, prompt)
         except Exception as e:
             raise e
-        log_msg = "Succeed asking question about content, without a retriever"
+        log_msg = "Succeed building chain with all documents"
         self.logger.info(log_msg)
-        return result, log_msg
+        return all_docs_chain, log_msg
 
     def asking_question_about_content_using_retrieved_documents_chain(
         self, retrieval_chain, question
@@ -384,7 +383,7 @@ class UtilsLLM:
 
         content = "\n".join(str(p.page_content) for p in chunks)
         log_msg = ""
-        log_msg += f"Total of words in the content: {len(content)}"
+        log_msg += f"Total of characters in the content: {len(content)}"
         log_msg += f", and total of chunks: {len(chunks)}"
         self.logger.info(log_msg)
         return None, log_msg
@@ -402,3 +401,26 @@ class UtilsLLM:
             return chunks, log_msg
         except Exception as e:
             raise e
+
+    def asking_question_about_content_using_all_documents_chain(
+        self, all_documents_chain, question, limited_text_documents
+    ):
+        """ Ask a question to a LLM model using a chain with all documents """
+
+        try:
+            answer_about_content = all_documents_chain.invoke(
+                {
+                    general_parameters.par__prompt_template_var_context: limited_text_documents,
+                    general_parameters.par__prompt_template_var_input: question,
+                }
+            )
+
+            # ToDo: allow a debug log with prompt fulfilled for checking
+
+        except Exception as e:
+            log_msg = "Failed asking question about content"
+            self.logger.error(log_msg)
+            raise e
+        log_msg = "Succeed asking question about content using a all documents chain"
+        self.logger.info(log_msg)
+        return answer_about_content, log_msg

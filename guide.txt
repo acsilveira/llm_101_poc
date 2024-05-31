@@ -49,7 +49,7 @@ LLM 101 PoC, ToDo
 [DONE]      Create another choice for "all text" and "text filtered by relevance"
 [DONE]      Show the choices for specific the screens
 [DONE]  Allow UI change the model choice for further questions
-*       Allow question inputting all(limited) content
+[DONE]  Allow question inputting all(limited) content
 [DONE]  Find a way to show logging in the UI
 [DONE]      Re-implement logging to show to the user each step happening: https://discuss.streamlit.io/t/redirecting-logger-output-to-a-streamlit-widget/61070/2
 [DONE]      Solve the error message popup "Bad 'setIn'"
