@@ -1,5 +1,14 @@
-# llm_101_poc
-Proof of concept for a 101 application using large language model
+# Simple app using LLM
+A LLM 101 Proof of Concept
 
-Requirements:
-* Python 3.11
+---
+
+< gif >
+
+---
+
+Contributions, thoughts, comments are welcome. 
+
+It requires Python 3.11.
+
+
