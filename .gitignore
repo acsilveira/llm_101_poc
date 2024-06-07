@@ -1,3 +1,6 @@
+# Custom for this app
+guide.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
