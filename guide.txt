@@ -56,11 +56,15 @@ LLM 101 PoC, ToDo
 [DONE]      Show option choice for content type PDF|URL only in the appropriated states
 [DONE]      If the option choice for content type PDF|URL changed then the chain should be rebuilt
         ---v0.2
-        Review notebooks
+[DONE]  Review notebooks
         Review python files
         Review README
-        Review guide
-        Review license
+[DONE]      Review text
+            Make and add the gif of application running
+[DONE]  Remove guide from repo, keep local
+[DONE]  Review license
+[DONE]  Review dockerfile, requirements
+[DONE]  Review data
         ---open source
         Tech debt
 [wip]       Reorg code as best practice
