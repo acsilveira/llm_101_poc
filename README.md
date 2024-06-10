@@ -16,7 +16,7 @@ Contributions, thoughts, comments are welcome.
 
 ---
 
-![Example](../doc/simple_app_llm.mp4)
+![Example](doc/simple_app_llm.mp4)
 
 ---
 
