@@ -80,7 +80,7 @@ def main():
     if "show_content_type_choice" not in st.session_state:
         st.session_state["show_content_type_choice"] = True
 
-    st.title("LLM very simple app")
+    st.title("LLM simple app")
 
     placeholder_choice = st.empty()
     with placeholder_choice.container():

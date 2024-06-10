@@ -365,6 +365,8 @@ class UtilsLLM:
         return vectorstore_loaded
 
     def get_current_index_pinecone(self, pinecone_client):
+        """ Get the current unique index set in pinecone """
+
         indexes_found = pinecone_client.list_indexes().names()
         if len(indexes_found) > 1:
             self.logger.error(
@@ -391,6 +393,8 @@ class UtilsLLM:
     def split_documents_into_chunks(
         self, documents_content, parr_chunk_size=500, parr_chunk_overlap=50
     ):
+        """ Split text into chunks """
+
         try:
             text_splitter = RecursiveCharacterTextSplitter(
                 chunk_size=parr_chunk_size, chunk_overlap=parr_chunk_overlap
