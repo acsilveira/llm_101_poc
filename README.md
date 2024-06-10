@@ -16,7 +16,9 @@ Contributions, thoughts, comments are welcome.
 
 ---
 
-![Example](doc/simple_app_llm.mp4)
+<div style="text-align: center;">
+  <img src="doc/simple_app_llm.gif" alt="Demo of the project">
+</div>
 
 ---
 
