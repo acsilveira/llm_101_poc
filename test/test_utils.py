@@ -35,7 +35,9 @@ class TestUtilsLLM:
 
         # Mock the PineconeClient and its methods
         pinecone_client_mock = MagicMock()
-        utils.check_if_a_specific_index_exists_in_pinecone = MagicMock(return_value=False)
+        utils.check_if_a_specific_index_exists_in_pinecone = MagicMock(
+            return_value=False
+        )
         utils.create_index = MagicMock()
 
         # Patch the ServerlessSpec class
