@@ -34,10 +34,9 @@ LOGGING_CONFIG = {
             "level": "WARNING",
             "handlers": ["console", "file"],
             "propagate": False,
-        }
+        },
     },
 }
 
 logging.config.dictConfig(LOGGING_CONFIG)
 logger = logging.getLogger()
-
