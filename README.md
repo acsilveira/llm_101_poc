@@ -16,7 +16,7 @@ Contributions, thoughts, comments are welcome.
 
 ---
 
-< gif >
+![Example](../doc/simple_app_llm.mp4)
 
 ---
 
