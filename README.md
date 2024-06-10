@@ -1,13 +1,24 @@
 # Simple app using LLM
 A LLM 101 Proof of Concept
 
+* Ask questions about a specific given content;
+* RAG
+  * Passing all content in the prompt;
+  * Filtering content using embeddings in vector store;
+* Source type
+  * URL;
+  * PDF;
+* LLM model
+  * Google Gemini;
+  * OpenAI GPT 3.5.
+
+Contributions, thoughts, comments are welcome.
+
 ---
 
 < gif >
 
 ---
-
-Contributions, thoughts, comments are welcome. 
 
 It requires Python 3.11.
 
