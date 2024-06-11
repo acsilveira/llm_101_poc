@@ -22,6 +22,6 @@ Contributions, thoughts, comments are welcome.
 
 ---
 
-It requires Python 3.11.
+Python 3.11 required.
 
 
