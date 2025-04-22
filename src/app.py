@@ -89,23 +89,23 @@ def main():
             not in general_parameters.par__stages_when_choices_are_disabled
         ):
             options_model_choice = ["Gemini", "chatGPT"]
+            default_index = options_model_choice.index(st.session_state.llm_model_choice) if st.session_state.llm_model_choice in options_model_choice else 0
             st.radio(
                 "LLM being used",
                 options_model_choice,
                 on_change=set_llm_model_choice,
                 key="element_llm_model_choice",
-                index=options_model_choice.index(st.session_state.llm_model_choice),
+                index=default_index,
             )
             if st.session_state["show_content_type_choice"]:
                 options_content_type = ["URL", "PDF"]
+                default_index = options_content_type.index(st.session_state.source_type_choice) if st.session_state.source_type_choice in options_content_type else 0
                 st.radio(
                     "Source type",
                     options_content_type,
                     on_change=set_source_type_choice,
                     key="element_source_type_choice",
-                    index=options_content_type.index(
-                        st.session_state.source_type_choice
-                    ),
+                    index=default_index,
                 )
             options_content_handling = [
                 general_parameters.par__default_text_handling_choice,
