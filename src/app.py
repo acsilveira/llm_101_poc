@@ -108,7 +108,7 @@ def main():
                     index=default_index,
                 )
             options_content_handling = [
-                general_parameters.par__default_text_handling_choice,
+                general_parameters.par__label_content_handling_retrieved_documents,
                 general_parameters.par__label_content_handling_all_text,
             ]
             default_index = options_content_handling.index(st.session_state.text_handling_choice) if st.session_state.text_handling_choice in options_content_handling else 0
