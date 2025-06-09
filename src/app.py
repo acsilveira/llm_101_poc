@@ -5,6 +5,16 @@ import parameters as general_parameters
 import pdfplumber
 import logging
 from custom_log_handler import StreamlitLogHandler
+from urllib.parse import urlparse
+import time
+
+
+def is_valid_url(url: str) -> bool:
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
 
 
 def setup_logging(log_container):
@@ -16,6 +26,28 @@ def setup_logging(log_container):
 
 
 def main():
+    # Set page config
+    st.set_page_config(
+        page_title="LLM Question Answering App",
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+
+    # Add custom CSS
+    st.markdown("""
+        <style>
+        .stProgress > div > div > div > div {
+            background-color: #4CAF50;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            border-bottom: 1px dotted black;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
     def set_state(i):
         st.session_state.stage = i
 
@@ -52,7 +84,7 @@ def main():
         """ Reset controller to avoid past questions interfering in the next question """
         st.session_state.ctl_llm.chain_is_prepared = False
 
-    # Control UI stages
+    # Initialize session state
     if "stage" not in st.session_state:
         st.session_state.stage = 0
     if "content_ref_to_ask" not in st.session_state:
@@ -80,47 +112,59 @@ def main():
     if "show_content_type_choice" not in st.session_state:
         st.session_state["show_content_type_choice"] = True
 
-    st.title("LLM simple app")
+    # Main UI
+    st.title("🤖 LLM Question Answering App")
+    
+    # Progress bar
+    progress_text = ["Input Source", "Question", "Confirm", "Processing", "Results"]
+    progress = st.progress(0)
+    progress.progress(min(st.session_state.stage / 4, 1.0))
+    st.caption(f"Step {st.session_state.stage + 1} of 5: {progress_text[min(st.session_state.stage, 4)]}")
 
-    placeholder_choice = st.empty()
-    with placeholder_choice.container():
-        if (
-            st.session_state.stage
-            not in general_parameters.par__stages_when_choices_are_disabled
-        ):
-            options_model_choice = ["Gemini", "chatGPT"]
-            default_index = options_model_choice.index(st.session_state.llm_model_choice) if st.session_state.llm_model_choice in options_model_choice else 0
-            st.radio(
-                "LLM being used",
-                options_model_choice,
-                on_change=set_llm_model_choice,
-                key="element_llm_model_choice",
-                index=default_index,
-            )
-            if st.session_state["show_content_type_choice"]:
-                options_content_type = ["URL", "PDF"]
-                default_index = options_content_type.index(st.session_state.source_type_choice) if st.session_state.source_type_choice in options_content_type else 0
+    # Sidebar with settings
+    with st.sidebar:
+        st.header("Settings")
+        placeholder_choice = st.empty()
+        with placeholder_choice.container():
+            if st.session_state.stage not in general_parameters.par__stages_when_choices_are_disabled:
+                options_model_choice = ["Gemini", "chatGPT"]
+                default_index = options_model_choice.index(st.session_state.llm_model_choice) if st.session_state.llm_model_choice in options_model_choice else 0
                 st.radio(
-                    "Source type",
-                    options_content_type,
-                    on_change=set_source_type_choice,
-                    key="element_source_type_choice",
+                    "LLM Model",
+                    options_model_choice,
+                    on_change=set_llm_model_choice,
+                    key="element_llm_model_choice",
                     index=default_index,
+                    help="Choose the language model to use for answering questions"
                 )
-            options_content_handling = [
-                general_parameters.par__label_content_handling_retrieved_documents,
-                general_parameters.par__label_content_handling_all_text,
-            ]
-            default_index = options_content_handling.index(st.session_state.text_handling_choice) if st.session_state.text_handling_choice in options_content_handling else 0
-            st.radio(
-                "Content handling",
-                options_content_handling,
-                on_change=set_text_handling_choice,
-                key="element_text_handling_choice",
-                index=default_index,
-            )
+                
+                if st.session_state["show_content_type_choice"]:
+                    options_content_type = ["URL", "PDF"]
+                    default_index = options_content_type.index(st.session_state.source_type_choice) if st.session_state.source_type_choice in options_content_type else 0
+                    st.radio(
+                        "Source Type",
+                        options_content_type,
+                        on_change=set_source_type_choice,
+                        key="element_source_type_choice",
+                        index=default_index,
+                        help="Choose the type of content to analyze"
+                    )
+                
+                options_content_handling = [
+                    general_parameters.par__label_content_handling_retrieved_documents,
+                    general_parameters.par__label_content_handling_all_text,
+                ]
+                default_index = options_content_handling.index(st.session_state.text_handling_choice) if st.session_state.text_handling_choice in options_content_handling else 0
+                st.radio(
+                    "Content Handling",
+                    options_content_handling,
+                    on_change=set_text_handling_choice,
+                    key="element_text_handling_choice",
+                    index=default_index,
+                    help="Choose how to process the content"
+                )
 
-    # Set placeholders for UI elements
+    # Main content area
     placeholder_input_content = st.empty()
     placeholder_input_question = st.empty()
     placeholder_input_confirm = st.empty()
@@ -138,46 +182,48 @@ def main():
         with placeholder_input_content.container():
             if st.session_state.source_type_choice == "URL":
                 st.subheader("Article URL")
-                st.write("What article do you want ask about?")
+                st.write("Enter the URL of the article you want to ask about:")
                 with st.form("form_content_url", border=False, clear_on_submit=True):
-                    url_to_ask = st.text_input("URL:")
+                    url_to_ask = st.text_input("URL:", help="Enter a valid URL starting with http:// or https://")
                     submitted = st.form_submit_button("Submit")
                     if submitted:
                         if not url_to_ask:
-                            url_to_ask = (
-                                general_parameters.par__default_url_content_to_test
-                            )
-                        st.session_state.content_ref_to_ask = url_to_ask
-                        placeholder_input_content.empty()
-                        set_state_and_content_type_choice_visibility_and_rerun(1, False)
+                            url_to_ask = general_parameters.par__default_url_content_to_test
+                        if not is_valid_url(url_to_ask):
+                            st.error("Please enter a valid URL starting with http:// or https://")
+                        else:
+                            st.session_state.content_ref_to_ask = url_to_ask
+                            placeholder_input_content.empty()
+                            set_state_and_content_type_choice_visibility_and_rerun(1, False)
+            
             elif st.session_state.source_type_choice == "PDF":
-                st.subheader("PDF file")
-                st.write("Upload a PDF file to ask about:")
-                file_ref = st.file_uploader("Upload PDF", type=["pdf"])
+                st.subheader("PDF File")
+                st.write("Upload a PDF file to ask questions about:")
+                file_ref = st.file_uploader("Upload PDF", type=["pdf"], help="Upload a PDF file (max 10MB)")
                 if st.button("Process"):
                     if file_ref is not None:
-                        st.session_state.content_ref_to_ask = file_ref.name
-                        st.session_state.pdf_file_ref = file_ref
-                        # Shows pdf file metadata
-                        file_details = {
-                            "filename": file_ref.name,
-                            "filetype": file_ref.type,
-                            "filesize": file_ref.size,
-                        }
-                        st.write(file_details)
-                        try:
-                            with pdfplumber.open(file_ref) as f:
-                                pages = f.pages[0]
-                                st.subheader("Page 1:")
-                                st.write(pages.extract_text())
-                        except Exception as e:
-                            st.write(">>Error loading pdf file.")
-                            raise e
-                        set_state_and_content_type_choice_visibility_and_rerun(1, False)
+                        if file_ref.size > 10 * 1024 * 1024:  # 10MB limit
+                            st.error("File size too large. Please upload a file smaller than 10MB.")
+                        else:
+                            with st.spinner("Processing PDF..."):
+                                st.session_state.content_ref_to_ask = file_ref.name
+                                st.session_state.pdf_file_ref = file_ref
+                                file_details = {
+                                    "Filename": file_ref.name,
+                                    "File Type": file_ref.type,
+                                    "File Size": f"{file_ref.size / 1024:.1f} KB"
+                                }
+                                st.json(file_details)
+                                try:
+                                    with pdfplumber.open(file_ref) as f:
+                                        pages = f.pages[0]
+                                        st.subheader("Preview (Page 1):")
+                                        st.text(pages.extract_text())
+                                    set_state_and_content_type_choice_visibility_and_rerun(1, False)
+                                except Exception as e:
+                                    st.error(f"Error processing PDF: {str(e)}")
                     else:
-                        st.write("Please, upload a PDF file first.")
-            else:
-                st.write(":red[Unknown content type.]")
+                        st.warning("Please upload a PDF file first.")
 
     # --------------------------------------------------
     # Screen: Get question to be asked
@@ -185,15 +231,18 @@ def main():
     if st.session_state.stage == 1:
         with placeholder_input_question.container():
             st.subheader("Question")
-            st.write("What do you want to know about the content in the web article?")
+            st.write("What would you like to know about the content?")
             with st.form("form_question_first", border=False, clear_on_submit=True):
-                text_question = st.text_input("Question:")
+                text_question = st.text_input("Question:", help="Enter your question about the content")
                 submitted = st.form_submit_button("Submit")
                 if submitted:
-                    st.session_state.question_text = text_question
-                    set_state_and_content_type_choice_visibility_and_rerun(2, False)
+                    if not text_question.strip():
+                        st.error("Please enter a question")
+                    else:
+                        st.session_state.question_text = text_question
+                        set_state_and_content_type_choice_visibility_and_rerun(2, False)
             st.button(
-                "Star over",
+                "Start Over",
                 on_click=set_state_and_content_type_choice_visibility,
                 args=[0, True],
             )
@@ -204,11 +253,16 @@ def main():
     if st.session_state.stage == 2:
         placeholder_input_question.empty()
         with placeholder_input_confirm.container():
+            st.subheader("Confirm")
             st.markdown(
-                f"You would ask **{st.session_state.question_text}** about the article in "
-                f"```{st.session_state.content_ref_to_ask}```. "
+                f"**Question:** {st.session_state.question_text}\n\n"
+                f"**Source:** {st.session_state.content_ref_to_ask}"
             )
-            st.button("Ask to LLM", on_click=set_state, args=[3])
+            col1, col2 = st.columns(2)
+            with col1:
+                st.button("Ask to LLM", on_click=set_state, args=[3])
+            with col2:
+                st.button("Start Over", on_click=set_state_and_content_type_choice_visibility, args=[0, True])
 
     # --------------------------------------------------
     # Screen: Prepare content, call LLM and show answer
@@ -217,65 +271,44 @@ def main():
         setup_logging(placeholder_log)
         placeholder_choice.empty()
         with placeholder_calling_llm.container():
-            result_success, answer = st.session_state.ctl_llm.ask_to_llm(
-                st.session_state.content_ref_to_ask,
-                st.session_state.question_text,
-                st.session_state.llm_model_choice,
-                st.session_state.source_type_choice,
-                st.session_state.pdf_file_ref,
-                st.session_state.text_handling_choice,
-            )
+            with st.spinner("Processing your question..."):
+                result_success, answer = st.session_state.ctl_llm.ask_to_llm(
+                    st.session_state.content_ref_to_ask,
+                    st.session_state.question_text,
+                    st.session_state.llm_model_choice,
+                    st.session_state.source_type_choice,
+                    st.session_state.pdf_file_ref,
+                    st.session_state.text_handling_choice,
+                )
 
-            if result_success == -1:
-                st.markdown(
-                    ":red[This article is not accessible by me.] Sorry. Please try another article."
-                    " The app will restart soon."
-                )
-                set_state(0)
-                utils.wait_for(
-                    seconds_to_wait=general_parameters.par__waiting_time_in_seconds_in_error_case
-                )
-                st.experimental_rerun()
-            elif result_success == -2:
-                st.markdown(
-                    ":red[The namespace was not found in the vector store.] Sorry. Please check the connection"
-                    " with the vector store."
-                    " The app will restart soon."
-                )
-                set_state(0)
-                utils.wait_for(
-                    seconds_to_wait=general_parameters.par__waiting_time_in_seconds_in_error_case
-                )
-                st.experimental_rerun()
-            elif result_success == -3:
-                st.markdown(":red[Unknown content type.] Sorry. This is not expected.")
-                raise Exception("Unknown content type to get content from.")
+                if result_success == -1:
+                    st.error("This article is not accessible. Please try another article.")
+                    time.sleep(general_parameters.par__waiting_time_in_seconds_in_error_case)
+                    set_state(0)
+                    st.experimental_rerun()
+                elif result_success == -2:
+                    st.error("Vector store connection error. Please check the connection.")
+                    time.sleep(general_parameters.par__waiting_time_in_seconds_in_error_case)
+                    set_state(0)
+                    st.experimental_rerun()
+                elif result_success == -3:
+                    st.error("Unknown content type error.")
+                    raise Exception("Unknown content type to get content from.")
 
         # Present answer
-        if (
-            st.session_state.text_handling_choice
-            == general_parameters.par__label_content_handling_all_text
-        ):
+        st.subheader("Answer")
+        if st.session_state.text_handling_choice == general_parameters.par__label_content_handling_all_text:
             st.write(answer)
-        elif (
-            st.session_state.text_handling_choice
-            == general_parameters.par__label_content_handling_retrieved_documents
-        ):
+        elif st.session_state.text_handling_choice == general_parameters.par__label_content_handling_retrieved_documents:
             st.write(answer["answer"])
-            with st.expander("See details"):
-                st.subheader("Details")
-                st.write(answer)
-                st.divider()
-        st.button(
-            "Ask again",
-            on_click=set_state_and_content_type_choice_visibility,
-            args=[4, False],
-        )
-        st.button(
-            "Start over",
-            on_click=set_state_and_content_type_choice_visibility,
-            args=[0, True],
-        )
+            with st.expander("View Details"):
+                st.json(answer)
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            st.button("Ask Another Question", on_click=set_state_and_content_type_choice_visibility, args=[4, False])
+        with col2:
+            st.button("Start Over", on_click=set_state_and_content_type_choice_visibility, args=[0, True])
 
     # --------------------------------------------------
     # Screen: Get question for a new ask
