@@ -8,6 +8,15 @@ from custom_log_handler import StreamlitLogHandler
 from urllib.parse import urlparse
 import time
 
+# Set page config at the top level (only once)
+if 'page_config_set' not in st.session_state:
+    st.set_page_config(
+        page_title="LLM Question Answering App",
+        page_icon="🤖",
+        layout="wide",
+        initial_sidebar_state="expanded"
+    )
+    st.session_state.page_config_set = True
 
 def is_valid_url(url: str) -> bool:
     try:
@@ -16,7 +25,6 @@ def is_valid_url(url: str) -> bool:
     except:
         return False
 
-
 def setup_logging(log_container):
     root_logger = logging.getLogger()  # Get the root logger
     handler = StreamlitLogHandler(log_container)
@@ -24,16 +32,7 @@ def setup_logging(log_container):
     root_logger.addHandler(handler)
     return handler
 
-
 def main():
-    # Set page config
-    st.set_page_config(
-        page_title="LLM Question Answering App",
-        page_icon="🤖",
-        layout="wide",
-        initial_sidebar_state="expanded"
-    )
-
     # Add custom CSS
     st.markdown("""
         <style>
