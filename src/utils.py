@@ -227,7 +227,7 @@ class UtilsLLM:
         """ Define the LLM model as a Google model """
 
         try:
-            llm_model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3)
+            llm_model = ChatGoogleGenerativeAI(model="gemini-2.0-flash", temperature=0.3)
             self.logger.info("LLM model defined as Gemini")
         except Exception as e:
             log_msg = "Failed trying the define the llm model."

@@ -4,10 +4,11 @@ openai==0.27.10
 pinecone-client==3.2.2
 tqdm==4.65.0
 sentence-transformers==2.2.2
-scikit-learn==1.2.2
+# scikit-learn==1.2.2
 streamlit==1.33.0
 google-generativeai==0.5.2
-langchain==0.2.3
+# langchain==0.2.3
+langchain
 langchain-google-genai==1.0.3
 langchain_pinecone==0.1.0
 beautifulsoup4==4.12.3
