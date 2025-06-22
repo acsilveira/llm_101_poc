@@ -14,16 +14,16 @@ LOGGING_CONFIG = {
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "default",
-            "level": "DEBUG",
+            "level": "INFO",
         },
         "file": {
             "class": "logging.FileHandler",
             "formatter": "default",
-            "level": "DEBUG",
+            "level": "INFO",
             "filename": abs_path_for_log_file,
         },
     },
-    "root": {"level": "DEBUG", "handlers": ["console", "file"],},
+    "root": {"level": "INFO", "handlers": ["console", "file"],},
     "loggers": {
         "pdfplumber": {
             "level": "WARNING",
