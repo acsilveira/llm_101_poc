@@ -18,6 +18,8 @@ if 'page_config_set' not in st.session_state:
     )
     st.session_state.page_config_set = True
 
+logging.basicConfig(level=logging.ERROR)
+
 def is_valid_url(url: str) -> bool:
     try:
         result = urlparse(url)
